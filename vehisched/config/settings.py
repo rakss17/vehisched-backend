@@ -27,6 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+BASE_URL = 'http://localhost:8000/'
 
 # Application definition
 
@@ -39,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'djoser'
+    'djoser',
+    'accounts'
 ]
 
 MIDDLEWARE = [
@@ -134,10 +136,10 @@ REST_FRAMEWORK = {
 DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
-    'ACTIVATION_URL': 'activation/{uid}/{token}',
+    'ACTIVATION_URL': 'api/v1/accounts/activation/{uid}/{token}',
 }
 
 EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_HOST_USER = '071402bd28ae37'
-EMAIL_HOST_PASSWORD = '********0187'
+EMAIL_HOST_USER = '72f28f72d261ba'
+EMAIL_HOST_PASSWORD = '05a16ddd97b40d'
 EMAIL_PORT = '2525'
