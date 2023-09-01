@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 
 class Role(models.Model):
     role_id = models.AutoField(primary_key=True)
-    role_name = models.CharField(max_length=255, choices=[
+    role_name = models.CharField(max_length=255, unique=True, choices=[
         ('admin', 'Admin'),
         ('requester', 'Requester'),
         ('vip', 'VIP'),
