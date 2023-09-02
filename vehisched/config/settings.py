@@ -110,7 +110,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
@@ -139,6 +139,9 @@ DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'ACTIVATION_URL': 'api/v1/accounts/activation/{uid}/{token}',
+    'SERIALIZERS': {
+        'user_create': 'accounts.serializers.UserSerializer',
+    },
 }
 
 EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
