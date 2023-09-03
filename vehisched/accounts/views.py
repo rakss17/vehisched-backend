@@ -7,6 +7,9 @@ from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from rest_framework import generics, permissions
+from .models import User
+from .serializers import UserSerializer
 
 User = get_user_model()
 
@@ -40,3 +43,10 @@ def activate_account(request, uidb64, token):
     else:
         messages.error(request, 'Activation link is invalid or has expired.')
         # return redirect('http://192.168.1.5:3000/Signup')
+
+
+# fetch all users information for admin
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAdminUser]
