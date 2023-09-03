@@ -3,6 +3,7 @@ from .models import User, Role
 
 
 class UserSerializer(serializers.ModelSerializer):
+
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
@@ -36,3 +37,13 @@ class UserSerializer(serializers.ModelSerializer):
         user.save()
 
         return user
+
+
+class FetchedUserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(
+        source='role.role_name', read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['role', 'username', 'email',
+                  'first_name', 'middle_name', 'last_name', 'mobile_number']

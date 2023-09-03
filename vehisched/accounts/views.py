@@ -9,10 +9,12 @@ from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions
 from .models import User
-from .serializers import UserSerializer
+from .serializers import UserSerializer, FetchedUserSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import permissions
+from rest_framework.pagination import PageNumberPagination
 
 User = get_user_model()
 
@@ -74,8 +76,33 @@ def user_type(request):
     return Response({'user_type': user_type})
 
 
-# fetch all users information for admin
+class CustomPagination(PageNumberPagination):
+    page_size = 10
+
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response({
+            'next': self.get_next_link(),
+            'previous': self.get_previous_link(),
+            'count': self.page.paginator.count,
+            'results': data
+        })
+
+
+class IsAdminOrReadOnly(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return request.user and (request.user.role.role_name == 'admin' or request.method in permissions.SAFE_METHODS)
+
+
 class UserListView(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]
+    serializer_class = FetchedUserSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        allowed_roles = ["requester", "office staff",
+                         "driver", "gate guard", "vip"]
+        queryset = User.objects.filter(role__role_name__in=allowed_roles)
+        return queryset
