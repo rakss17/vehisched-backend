@@ -10,6 +10,9 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions
 from .models import User
 from .serializers import UserSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 User = get_user_model()
 
@@ -43,6 +46,32 @@ def activate_account(request, uidb64, token):
     else:
         messages.error(request, 'Activation link is invalid or has expired.')
         # return redirect('http://192.168.1.5:3000/Signup')
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_type(request):
+    user_profile = request.user
+    if user_profile.role:
+        role_name = user_profile.role.role_name
+        if role_name == 'admin':
+            user_type = "admin"
+        elif role_name == 'requester':
+            user_type = "requester"
+        elif role_name == 'vip':
+            user_type = "vip"
+        elif role_name == 'driver':
+            user_type = "driver"
+        elif role_name == 'gate guard':
+            user_type = "gate guard"
+        elif role_name == 'office staff':
+            user_type = "office staff"
+        else:
+            user_type = "unknown"
+    else:
+        user_type = "unknown"
+
+    return Response({'user_type': user_type})
 
 
 # fetch all users information for admin
