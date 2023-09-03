@@ -29,3 +29,13 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+
+class DriverStatus(models.Model):
+    user = models.OneToOneField(
+        'User', on_delete=models.CASCADE, related_name='driver_status')
+    status = models.CharField(max_length=255, choices=[
+        ('available', 'Available'),
+        ('on trip', 'On Trip'),
+        ('unavailable', 'Unavailable')
+    ], default='Available')
