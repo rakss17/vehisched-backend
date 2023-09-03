@@ -22,7 +22,7 @@ class Role(models.Model):
 
 
 class User(AbstractUser):
-    role = models.OneToOneField(
+    role = models.ForeignKey(
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)

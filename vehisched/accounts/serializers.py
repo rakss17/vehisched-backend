@@ -5,8 +5,6 @@ from .models import User, Role
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
-    confirm_password = serializers.CharField(
-        style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
 
     # Add a field for selecting the user's role
@@ -16,7 +14,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['role', 'username', 'email', 'first_name', 'middle_name', 'last_name', 'password',
-                  'confirm_password', 'mobile_number']
+                  'mobile_number']
 
     def save(self, **kwargs):
         # Remove role from validated_data
@@ -31,7 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
             last_name=self.validated_data['last_name'],
             password=self.validated_data['password'],
             mobile_number=self.validated_data['mobile_number'],
-            role=role  # Assign the role to the user
+            role=role
         )
 
         user.is_active = False
