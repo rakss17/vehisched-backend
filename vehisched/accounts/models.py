@@ -8,7 +8,7 @@ from rest_framework.authtoken.models import Token
 
 class Role(models.Model):
     role_id = models.AutoField(primary_key=True)
-    role_name = models.CharField(max_length=255, unique=True, choices=[
+    role_name = models.CharField(max_length=255, choices=[
         ('admin', 'Admin'),
         ('requester', 'Requester'),
         ('vip', 'VIP'),
@@ -22,7 +22,7 @@ class Role(models.Model):
 
 
 class User(AbstractUser):
-    role = models.ForeignKey(
+    role = models.OneToOneField(
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)
