@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import Role
+from vehicle.models import Vehicle
 
 
 class Request (models.Model):
@@ -13,6 +14,8 @@ class Request (models.Model):
     purpose = models.CharField(max_length=1000, null=True, blank=True)
     is_approved = models.BooleanField(default=False)
     status = models.CharField(max_length=100, null=True, blank=True)
+    vehicle = models.ForeignKey(
+        Vehicle, on_delete=models.CASCADE, null=True, blank=True)
 
     requester = models.ForeignKey(
         Role,
@@ -21,3 +24,6 @@ class Request (models.Model):
         blank=True,
         limit_choices_to={'role_name': 'requester'}
     )
+
+    def __str__(self):
+        return self.requester_name
