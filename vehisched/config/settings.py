@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'djoser',
     'accounts',
     'request',
-    'vehicle'
+    'vehicle',
+    'tripticket'
 ]
 
 MIDDLEWARE = [
