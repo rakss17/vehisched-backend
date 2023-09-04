@@ -7,9 +7,9 @@ from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from rest_framework import generics, permissions
-from .models import User
-from .serializers import UserSerializer, FetchedUserSerializer
+from rest_framework import generics, permissions, status
+from .models import User, Role
+from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -106,3 +106,56 @@ class UserListView(generics.ListAPIView):
                          "driver", "gate guard", "vip"]
         queryset = User.objects.filter(role__role_name__in=allowed_roles)
         return queryset
+
+
+class RoleByNameView(generics.RetrieveAPIView):
+    serializer_class = RoleByNameSerializer
+
+    def get_object(self):
+        role_name = self.request.query_params.get('role_name')
+        try:
+            role = Role.objects.get(role_name=role_name)
+            return role
+        except Role.DoesNotExist:
+            return Response({'message': f"Role with name '{role_name}' does not exist."}, status=404)
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserUpdateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        user_id = self.kwargs.get('pk')
+        return self.queryset.get(pk=user_id)
+
+    def update(self, request, *args, **kwargs):
+        user = self.get_object()
+
+        role_name_serializer = RoleByNameSerializer(data=request.data)
+        role_name_serializer.is_valid(raise_exception=True)
+        role_name = role_name_serializer.validated_data.get('role_name')
+
+        try:
+            role_instance = Role.objects.get(role_name=role_name)
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        user.role = role_instance
+
+        user_data_to_update = {
+            'username': request.data.get('username', user.username),
+            'email': request.data.get('email', user.email),
+            'first_name': request.data.get('first_name', user.first_name),
+            'middle_name': request.data.get('middle_name', user.middle_name),
+            'last_name': request.data.get('last_name', user.last_name),
+            'mobile_number': request.data.get('mobile_number', user.mobile_number),
+        }
+
+        user_serializer = UserUpdateSerializer(
+            user, data=user_data_to_update, partial=True)
+        if user_serializer.is_valid():
+            user_serializer.save()
+            return super().update(request, *args, **kwargs)
+        else:
+            return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)

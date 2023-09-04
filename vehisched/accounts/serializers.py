@@ -8,7 +8,6 @@ class UserSerializer(serializers.ModelSerializer):
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
 
-    # Add a field for selecting the user's role
     role = serializers.ChoiceField(choices=Role.objects.all(
     ).values_list('role_name', flat=True), write_only=True)
 
@@ -18,7 +17,7 @@ class UserSerializer(serializers.ModelSerializer):
                   'mobile_number']
 
     def save(self, **kwargs):
-        # Remove role from validated_data
+
         role_name = self.validated_data.pop('role')
         role = Role.objects.get(role_name=role_name)
 
@@ -45,5 +44,19 @@ class FetchedUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['role', 'username', 'email',
+        fields = ['id', 'role', 'username', 'email',
                   'first_name', 'middle_name', 'last_name', 'mobile_number']
+
+
+class RoleByNameSerializer(serializers.Serializer):
+    role_name = serializers.CharField()
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    role = serializers.ChoiceField(
+        choices=Role.objects.all().values_list('role_name', flat=True))
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'first_name',
+                  'middle_name', 'last_name', 'mobile_number', 'role']
