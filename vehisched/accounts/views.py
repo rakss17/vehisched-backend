@@ -13,7 +13,6 @@ from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerial
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework import permissions
 from rest_framework.pagination import PageNumberPagination
 
 User = get_user_model()
@@ -159,3 +158,15 @@ class UserUpdateView(generics.UpdateAPIView):
             return super().update(request, *args, **kwargs)
         else:
             return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UserDeleteView(generics.DestroyAPIView):
+    queryset = User.objects.all()
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except User.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
