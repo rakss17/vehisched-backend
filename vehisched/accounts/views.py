@@ -49,30 +49,12 @@ def activate_account(request, uidb64, token):
         # return redirect('http://192.168.1.5:3000/Signup')
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def user_type(request):
-    user_profile = request.user
-    if user_profile.role:
-        role_name = user_profile.role.role_name
-        if role_name == 'admin':
-            user_type = "admin"
-        elif role_name == 'requester':
-            user_type = "requester"
-        elif role_name == 'vip':
-            user_type = "vip"
-        elif role_name == 'driver':
-            user_type = "driver"
-        elif role_name == 'gate guard':
-            user_type = "gate guard"
-        elif role_name == 'office staff':
-            user_type = "office staff"
-        else:
-            user_type = "unknown"
-    else:
-        user_type = "unknown"
+class UserProfileView(generics.RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = FetchedUserSerializer
 
-    return Response({'user_type': user_type})
+    def get_object(self):
+        return self.request.user
 
 
 class CustomPagination(PageNumberPagination):

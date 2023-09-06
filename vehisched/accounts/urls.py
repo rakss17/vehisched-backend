@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
-from .views import activate_account, UserListView, user_type, UserUpdateView, RoleByNameView, UserDeleteView
+from .views import activate_account, UserListView, UserUpdateView, RoleByNameView, UserProfileView
 
 urlpatterns = [
     path('', include('djoser.urls')),
@@ -8,8 +8,7 @@ urlpatterns = [
     path('activation/<uidb64>/<token>/',
          activate_account, name='activate_account'),
     path('admin/', UserListView.as_view(), name='user-list'),
-    path('user_type/', user_type),
     path('update/<int:pk>/', UserUpdateView.as_view(), name='user-update'),
     path('roles/by-name/', RoleByNameView.as_view(), name='role-by-name'),
-    path('delete/<int:pk>/', UserDeleteView.as_view(), name='delete-user'),
+    path('user-profile/', UserProfileView.as_view(), name='user-profile'),
 ]
