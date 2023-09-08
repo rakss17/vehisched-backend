@@ -22,10 +22,20 @@ class Role(models.Model):
 
 
 class User(AbstractUser):
-    role = models.OneToOneField(
+    role = models.ForeignKey(
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.username
+
+
+class DriverStatus(models.Model):
+    user = models.OneToOneField(
+        'User', on_delete=models.CASCADE, related_name='driver_status')
+    status = models.CharField(max_length=255, choices=[
+        ('available', 'Available'),
+        ('on trip', 'On Trip'),
+        ('unavailable', 'Unavailable')
+    ], default='Available')

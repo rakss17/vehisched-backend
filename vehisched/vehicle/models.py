@@ -18,7 +18,7 @@ class Vehicle(models.Model):
     vehicle_type = models.CharField(max_length=255, null=True, blank=True)
     capacity = models.IntegerField()
     status = models.ForeignKey(
-        Vehicle_Status, on_delete=models.SET_NULL, null=True, blank=True, default="Pending")
+        Vehicle_Status, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.plate_number
