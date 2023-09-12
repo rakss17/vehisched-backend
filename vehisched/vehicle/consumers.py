@@ -4,6 +4,8 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import Vehicle
 from .serializers import VehicleSerializer
 import logging
+from asgiref.sync import sync_to_async
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +17,11 @@ class VehicleConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.exception("WebSocket connection failed: %s", str(e))
 
-    async def disconnect(self, close_code):
-        pass
-
     async def receive(self, text_data):
         data = json.loads(text_data)
         action = data.get('action')
+
+        print(data)
 
         if action == 'post_vehicle':
             await self.post_vehicle(data)
@@ -30,10 +31,13 @@ class VehicleConsumer(AsyncWebsocketConsumer):
             await self.update_vehicle(data)
 
     async def post_vehicle(self, data):
-        serializer = VehicleSerializer(data=data)
+        print("serializer dataaa: ", data['data'])
+        serializer = VehicleSerializer(data=data['data'])
 
-        if serializer.is_valid():
-            vehicle = serializer.save()
+        is_valid = await sync_to_async(serializer.is_valid)()
+
+        if is_valid:
+            vehicle = await sync_to_async(serializer.save)()
             response_data = {
                 'action': 'vehicle_posted',
                 'data': VehicleSerializer(vehicle).data
@@ -47,8 +51,9 @@ class VehicleConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps(response_data))
 
     async def fetch_vehicles(self):
-        vehicles = Vehicle.objects.all()
-        serialized_vehicles = VehicleSerializer(vehicles, many=True).data
+        vehicles = await sync_to_async(list)(Vehicle.objects.all())
+        serializer = await sync_to_async(VehicleSerializer)(vehicles, many=True)
+        serialized_vehicles = serializer.data
         response_data = {
             'action': 'vehicles_fetched',
             'data': serialized_vehicles
@@ -72,3 +77,6 @@ class VehicleConsumer(AsyncWebsocketConsumer):
             }
 
         await self.send(text_data=json.dumps(response_data))
+
+    async def disconnect(self, close_code):
+        pass
