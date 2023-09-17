@@ -8,6 +8,10 @@ django = "*"
 djangorestframework = "*"
 djoser = "*"
 django-cors-headers = "*"
+channels = "*"
+channels-redis = "*"
+daphne = "*"
+pillow = "*"
 
 [dev-packages]
 
