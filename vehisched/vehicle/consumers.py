@@ -6,6 +6,7 @@ from .serializers import VehicleSerializer
 import logging
 from asgiref.sync import sync_to_async
 import asyncio
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 logger = logging.getLogger(__name__)
 
@@ -31,13 +32,27 @@ class VehicleConsumer(AsyncWebsocketConsumer):
             await self.update_vehicle(data)
 
     async def post_vehicle(self, data):
-        print("serializer dataaa: ", data['data'])
+        uploaded_file_data = data['data'].pop('vehicle_image', None)
+        print("image data: ", uploaded_file_data)
+
         serializer = VehicleSerializer(data=data['data'])
 
         is_valid = await sync_to_async(serializer.is_valid)()
 
         if is_valid:
             vehicle = await sync_to_async(serializer.save)()
+
+            # Handle the file data and save it to the model's vehicle_image field
+            if uploaded_file_data:
+                # Convert the binary data back into a file
+                # This is a simplified example and may not work for all file types and situations
+                uploaded_file = io.BytesIO(uploaded_file_data)
+                uploaded_file.name = 'uploaded_file.png'
+
+                # Save the uploaded file to the model
+                vehicle.vehicle_image.save(uploaded_file.name, uploaded_file)
+                vehicle.save()
+
             response_data = {
                 'action': 'vehicle_posted',
                 'data': VehicleSerializer(vehicle).data
@@ -48,7 +63,8 @@ class VehicleConsumer(AsyncWebsocketConsumer):
                 'errors': serializer.errors
             }
 
-        await self.send(text_data=json.dumps(response_data))
+        # Use self.send() to send JSON data
+        await self.send(json.dumps(response_data))
 
     async def fetch_vehicles(self):
         vehicles = await sync_to_async(list)(Vehicle.objects.all())

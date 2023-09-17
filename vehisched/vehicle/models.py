@@ -21,6 +21,8 @@ class Vehicle(models.Model):
     status = models.ForeignKey(
         Vehicle_Status, on_delete=models.SET_NULL, null=True, blank=True)
     is_vip = models.BooleanField(default=False)
+    vehicle_image = models.ImageField(
+        upload_to='vehicle_images/', null=True, blank=True)
 
     def __str__(self):
         return self.plate_number
