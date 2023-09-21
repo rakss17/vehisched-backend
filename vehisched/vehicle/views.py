@@ -48,7 +48,7 @@ class VehicleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
         if serializer.is_valid():
 
-            new_image = request.FILES.get('vehicle_image')
+            new_image = request.FILES.get('vehicle_image', None)
             print("imnagege: ", new_image)
             if new_image:
 
