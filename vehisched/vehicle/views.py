@@ -15,6 +15,7 @@ class VehicleListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
+    parser_classes = (MultiPartParser, FormParser)
 
     def create(self, request, *args, **kwargs):
 
