@@ -3,9 +3,9 @@ from django.db import models
 
 class Vehicle_Status(models.Model):
     description = models.CharField(primary_key=True, max_length=255, choices=[
-        ('available', 'Available'),
-        ('on trip', 'On Trip'),
-        ('unavailable', 'Unavailable'),
+        ('Available', 'Available'),
+        ('On trip', 'On Trip'),
+        ('Unavailable', 'Unavailable'),
     ])
 
     def __str(self):
