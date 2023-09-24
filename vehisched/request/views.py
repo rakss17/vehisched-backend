@@ -14,7 +14,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         passenger_names = request.data.get('passenger_names', [])
 
         try:
-            t
             passenger_names = json.loads(passenger_names)
         except json.JSONDecodeError:
             return Response({'passenger_names': ['Invalid JSON data.']}, status=400)
