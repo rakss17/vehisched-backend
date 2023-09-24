@@ -8,7 +8,7 @@ class Vehicle_Status(models.Model):
         ('Unavailable', 'Unavailable'),
     ])
 
-    def __str(self):
+    def __str__(self):
         return self.description
 
 
@@ -23,6 +23,7 @@ class Vehicle(models.Model):
     is_vip = models.BooleanField(default=False)
     vehicle_image = models.ImageField(
         upload_to='vehicle_images/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
         return self.plate_number
