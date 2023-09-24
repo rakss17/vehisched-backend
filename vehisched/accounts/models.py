@@ -31,7 +31,7 @@ class User(AbstractUser):
         return self.username
 
 
-class DriverStatus(models.Model):
+class Driver_Status(models.Model):
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='driver_status')
     status = models.CharField(max_length=255, choices=[
