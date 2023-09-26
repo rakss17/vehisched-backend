@@ -11,8 +11,6 @@ from rest_framework.parsers import MultiPartParser, FormParser
 
 class VehicleListCreateView(generics.ListCreateAPIView):
 
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
     queryset = Vehicle.objects.all()
     serializer_class = VehicleSerializer
     parser_classes = (MultiPartParser, FormParser)

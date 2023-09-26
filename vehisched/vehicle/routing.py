@@ -3,5 +3,5 @@ from . import consumers
 
 
 websocket_urlpatterns = [
-    re_path(r'vehicle', consumers.VehicleConsumer.as_asgi()),
+    re_path(r'available', consumers.VehicleStatusConsumer.as_asgi()),
 ]
