@@ -6,6 +6,6 @@ urlpatterns = [
          name='request-list-create'),
      path('fetch/', views.RequestListOfficeStaffView.as_view(),
          name='request-list'),
-    path('requests/<int:pk>/', views.RequestRetrieveUpdateDestroyView.as_view(),
-         name='request-retrieve-update-destroy'),
+    path('approve/<int:pk>/', views.RequestApprovedView.as_view(),
+         name='request-approved'),
 ]

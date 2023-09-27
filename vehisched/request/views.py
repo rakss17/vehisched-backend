@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request
+from .models import Request, Request_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 import json
@@ -23,7 +23,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
             return Response({'passenger_names': ['Invalid JSON data.']}, status=400)
 
         plate_number = request.data.get('vehicle')
-        print("plate", plate_number)
+       
         if plate_number:
            
             try:
@@ -50,6 +50,23 @@ class RequestListOfficeStaffView(generics.ListAPIView):
 
 
 
-class RequestRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        is_approving = request.data.get('is_approved', False)
+
+        if is_approving:
+            
+            approved_status = Request_Status.objects.get(description='Approved')
+            instance.status = approved_status
+            instance.save()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
