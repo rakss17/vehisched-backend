@@ -6,6 +6,7 @@ class Vehicle_Status(models.Model):
         ('Available', 'Available'),
         ('On trip', 'On Trip'),
         ('Unavailable', 'Unavailable'),
+        ('Reserved', 'Reserved'),
     ])
 
     def __str__(self):
