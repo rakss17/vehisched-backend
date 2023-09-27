@@ -6,8 +6,14 @@ from vehicle.models import Vehicle, Vehicle_Status
 import json
 
 class RequestListCreateView(generics.ListCreateAPIView):
-    queryset = Request.objects.all()
+    # queryset = Request.objects.all()
     serializer_class = RequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Request.objects.filter(requester_name=user)
+        return queryset
+
 
     def create(self, request, *args, **kwargs):
         passenger_names = request.data.get('passenger_names', [])
