@@ -1,12 +1,11 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request
-from .serializers import RequestSerializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 import json
 
 class RequestListCreateView(generics.ListCreateAPIView):
-    # queryset = Request.objects.all()
     serializer_class = RequestSerializer
 
     def get_queryset(self):
@@ -44,7 +43,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return super().create(request, *args, **kwargs)
 
 
-
+class RequestListOfficeStaffView(generics.ListAPIView):
+    serializer_class = RequestOfficeStaffSerializer
+    queryset = Request.objects.all()
+    
 
 
 

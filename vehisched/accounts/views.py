@@ -32,6 +32,7 @@ def activate_account(request, uidb64, token):
         activation_link = f"{settings.BASE_URL}/activation/{uidb64}/{token}/"
 
         temporary_password = f"{user.last_name.lower()}@{user.first_name.lower()}"
+        temporary_password = temporary_password.replace(" ", "") 
         user.set_password(temporary_password)
         user.save()
 
