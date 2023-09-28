@@ -8,8 +8,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions, status
-from .models import User, Role
-from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer
+from .models import User, Role, Driver_Status
+from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer, DriverSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -153,3 +153,7 @@ class UserDeleteView(generics.DestroyAPIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except User.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+class DriverListView(generics.ListAPIView):
+    queryset = Driver_Status.objects.all()
+    serializer_class = DriverSerializer

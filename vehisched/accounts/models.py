@@ -1,9 +1,6 @@
 from django.db import models
-from django.db.models.signals import post_save
-from django.conf import settings
-from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser
-from rest_framework.authtoken.models import Token
+
 
 
 class Role(models.Model):
@@ -33,9 +30,11 @@ class User(AbstractUser):
 
 class Driver_Status(models.Model):
     user = models.OneToOneField(
-        'User', on_delete=models.CASCADE, related_name='driver_status')
+        'User', on_delete=models.CASCADE, primary_key=True)
     status = models.CharField(max_length=255, choices=[
-        ('available', 'Available'),
-        ('on trip', 'On Trip'),
-        ('unavailable', 'Unavailable')
+        ('Available', 'Available'),
+        ('On trip', 'On Trip'),
+        ('Unavailable', 'Unavailable')
     ], default='Available')
+
+
