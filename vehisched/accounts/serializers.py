@@ -52,7 +52,7 @@ class FetchedUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'role', 'username', 'email',
-                  'first_name', 'middle_name', 'last_name', 'mobile_number']
+                  'first_name', 'middle_name', 'last_name', 'mobile_number', 'is_active']
 class UserDriverSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

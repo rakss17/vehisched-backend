@@ -157,3 +157,17 @@ class UserDeleteView(generics.DestroyAPIView):
 class DriverListView(generics.ListAPIView):
     queryset = Driver_Status.objects.all()
     serializer_class = DriverSerializer
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_user_activation(request, pk):
+    user = get_object_or_404(User, pk=pk)
+    
+    if user.is_active:
+        user.is_active = False
+    else:
+        user.is_active = True
+    
+    user.save()
+    
+    return Response({'message': 'User activation status changed successfully.', 'is_active': user.is_active}, status=status.HTTP_200_OK)
