@@ -1,98 +1,84 @@
-# consumers.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .models import Vehicle
-from .serializers import VehicleSerializer
-import logging
-from asgiref.sync import sync_to_async
-import asyncio
-from django.core.files.uploadedfile import InMemoryUploadedFile
+from channels.layers import get_channel_layer
+from asgiref.sync import sync_to_async, async_to_sync
+from django.core.exceptions import ObjectDoesNotExist
 
-logger = logging.getLogger(__name__)
-
-
-class VehicleConsumer(AsyncWebsocketConsumer):
+class VehicleStatusConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        try:
-            await self.accept()
-        except Exception as e:
-            logger.exception("WebSocket connection failed: %s", str(e))
+        await self.accept()
+        await self.channel_layer.group_add("vehicle_status_updates", self.channel_name)
 
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard("vehicle_status_updates", self.channel_name)
+        
     async def receive(self, text_data):
         data = json.loads(text_data)
         action = data.get('action')
 
-        print(data)
+        if action == 'fetch_available_vehicles':
+            await self.fetch_available_vehicles()
 
-        if action == 'post_vehicle':
-            await self.post_vehicle(data)
-        elif action == 'fetch_vehicles':
-            await self.fetch_vehicles()
-        elif action == 'update_vehicle':
-            await self.update_vehicle(data)
+    async def fetch_available_vehicles(self):
+        available_vehicles = await self.get_available_vehicles()
+        await self.send(text_data=json.dumps({
+            'type': 'available.vehicles',
+            'data': available_vehicles,
+        }))
 
-    async def post_vehicle(self, data):
-        uploaded_file_data = data['data'].pop('vehicle_image', None)
-        print("image data: ", uploaded_file_data)
+    @sync_to_async
+    def get_available_vehicles(self):
+        available_vehicles = Vehicle.objects.filter(status__description='Available')
+        vehicles_list = []
 
-        serializer = VehicleSerializer(data=data['data'])
+        for vehicle in available_vehicles:
+            vehicles_list.append({
+                'plate_number': vehicle.plate_number,
+                'vehicle_name': vehicle.vehicle_name,
+                'vehicle_type': vehicle.vehicle_type,
+                'capacity': vehicle.capacity,
+                'status': vehicle.status.description if vehicle.status else None,
+                'is_vip': vehicle.is_vip,
+                'vehicle_image': vehicle.vehicle_image.url if vehicle.vehicle_image else None,
+                'created_at': vehicle.created_at.strftime('%Y-%m-%d %H:%M:%S') if vehicle.created_at else None,
+            })
 
-        is_valid = await sync_to_async(serializer.is_valid)()
 
-        if is_valid:
-            vehicle = await sync_to_async(serializer.save)()
 
-            # Handle the file data and save it to the model's vehicle_image field
-            if uploaded_file_data:
-                # Convert the binary data back into a file
-                # This is a simplified example and may not work for all file types and situations
-                uploaded_file = io.BytesIO(uploaded_file_data)
-                uploaded_file.name = 'uploaded_file.png'
+        return vehicles_list
 
-                # Save the uploaded file to the model
-                vehicle.vehicle_image.save(uploaded_file.name, uploaded_file)
-                vehicle.save()
-
-            response_data = {
-                'action': 'vehicle_posted',
-                'data': VehicleSerializer(vehicle).data
+    @sync_to_async
+    def fetch_vehicle_data(self, plate_number):
+        try:
+            vehicle = Vehicle.objects.get(plate_number=plate_number)
+            return {
+                'plate_number': vehicle.plate_number,
+                'vehicle_name': vehicle.vehicle_name,
+                'vehicle_type': vehicle.vehicle_type,
+                'capacity': vehicle.capacity,
+                'status': vehicle.status.description if vehicle.status else None,
+                'is_vip': vehicle.is_vip,
+                'vehicle_image': vehicle.vehicle_image.url if vehicle.vehicle_image else None,
+                'created_at': vehicle.created_at.strftime('%Y-%m-%d %H:%M:%S') if vehicle.created_at else None,
             }
+        except ObjectDoesNotExist:
+            return None
+
+    async def status_update(self, event):
+        plate_number = event["plate_number"]
+        vehicle_data = await self.fetch_vehicle_data(plate_number)
+
+        if vehicle_data is not None:
+            await self.send(text_data=json.dumps({
+                'type': 'status.update',
+                'message': f"Vehicle {plate_number} {event['message']}",
+                'data': vehicle_data,
+            }))
         else:
-            response_data = {
-                'action': 'vehicle_post_error',
-                'errors': serializer.errors
-            }
+            await self.send(text_data=json.dumps({
+                'type': 'status.update',
+                'message': f"Vehicle {plate_number} not found: {event['message']}",
+            }))
 
-        # Use self.send() to send JSON data
-        await self.send(json.dumps(response_data))
 
-    async def fetch_vehicles(self):
-        vehicles = await sync_to_async(list)(Vehicle.objects.all())
-        serializer = await sync_to_async(VehicleSerializer)(vehicles, many=True)
-        serialized_vehicles = serializer.data
-        response_data = {
-            'action': 'vehicles_fetched',
-            'data': serialized_vehicles
-        }
-        await self.send(text_data=json.dumps(response_data))
-
-    async def update_vehicle(self, data):
-        vehicle = Vehicle.objects.get(pk=data.get('pk'))
-        serializer = VehicleSerializer(vehicle, data=data, partial=True)
-
-        if serializer.is_valid():
-            updated_vehicle = serializer.save()
-            response_data = {
-                'action': 'vehicle_updated',
-                'data': VehicleSerializer(updated_vehicle).data
-            }
-        else:
-            response_data = {
-                'action': 'vehicle_update_error',
-                'errors': serializer.errors
-            }
-
-        await self.send(text_data=json.dumps(response_data))
-
-    async def disconnect(self, close_code):
-        pass

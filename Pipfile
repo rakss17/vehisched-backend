@@ -12,6 +12,7 @@ channels = "*"
 channels-redis = "*"
 daphne = "*"
 pillow = "*"
+python-dotenv = "*"
 
 [dev-packages]
 

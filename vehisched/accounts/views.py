@@ -8,8 +8,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions, status
-from .models import User, Role
-from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer
+from .models import User, Role, Driver_Status
+from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer, DriverSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -32,6 +32,7 @@ def activate_account(request, uidb64, token):
         activation_link = f"{settings.BASE_URL}/activation/{uidb64}/{token}/"
 
         temporary_password = f"{user.last_name.lower()}@{user.first_name.lower()}"
+        temporary_password = temporary_password.replace(" ", "") 
         user.set_password(temporary_password)
         user.save()
 
@@ -43,10 +44,10 @@ def activate_account(request, uidb64, token):
 
         send_mail(subject, message, from_email, [to_email])
         messages.success(request, 'Your account has been activated.')
-        # return redirect('http://192.168.1.5:3000/Activated')
+        return redirect('http://localhost:5173/#/AccountActivated')
     else:
         messages.error(request, 'Activation link is invalid or has expired.')
-        # return redirect('http://192.168.1.5:3000/Signup')
+        return redirect('http://localhost:5173/#/NotFound')
 
 
 class UserProfileView(generics.RetrieveAPIView):
@@ -152,3 +153,7 @@ class UserDeleteView(generics.DestroyAPIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except User.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
+
+class DriverListView(generics.ListAPIView):
+    queryset = Driver_Status.objects.all()
+    serializer_class = DriverSerializer
