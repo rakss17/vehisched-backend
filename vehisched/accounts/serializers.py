@@ -7,9 +7,12 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
+    
 
-    role = serializers.ChoiceField(choices=Role.objects.all(
-    ).values_list('role_name', flat=True), write_only=True)
+    role = serializers.ChoiceField(choices=[])
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [(role.role_name, role.role_name) for role in Role.objects.all()]
 
     class Meta:
         model = User
@@ -66,8 +69,10 @@ class RoleByNameSerializer(serializers.Serializer):
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    role = serializers.ChoiceField(
-        choices=Role.objects.all().values_list('role_name', flat=True))
+    role = serializers.ChoiceField(choices=[])
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['role'].choices = [(role.role_name, role.role_name) for role in Role.objects.all()]
 
     class Meta:
         model = User
