@@ -7,7 +7,6 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
-    
 
     role = serializers.ChoiceField(choices=[])
     def __init__(self, *args, **kwargs):
@@ -18,30 +17,32 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['role', 'username', 'email', 'first_name', 'middle_name', 'last_name', 'password',
                   'mobile_number']
+                  
 
     def save(self, **kwargs):
 
-        role_name = self.validated_data.pop('role')
-        role = Role.objects.get(role_name=role_name)
+        role_name = self.validated_data.get('role')  
+        if role_name:
+            role = Role.objects.get(role_name=role_name)
 
-        user = User.objects.create_user(
-            username=self.validated_data['username'],
-            email=self.validated_data['email'],
-            first_name=self.validated_data['first_name'],
-            middle_name=self.validated_data['middle_name'],
-            last_name=self.validated_data['last_name'],
-            password=self.validated_data['password'],
-            mobile_number=self.validated_data['mobile_number'],
-            role=role
-        )
+            user = User.objects.create_user(
+                username=self.validated_data['username'],
+                email=self.validated_data['email'],
+                first_name=self.validated_data['first_name'],
+                middle_name=self.validated_data['middle_name'],
+                last_name=self.validated_data['last_name'],
+                password=self.validated_data['password'],
+                mobile_number=self.validated_data['mobile_number'],
+                role=role  
+            )
 
-        user.is_active = False
-        user.save()
+            user.is_active = False
+            user.save()
 
-        if role_name == 'driver':
-            driver = Driver_Status.objects.create(user=user, status='Available')
+            if role_name == 'driver':
+                driver = Driver_Status.objects.create(user=user, status='Available')
 
-        return user
+            return user
 
 
 class FetchedUserSerializer(serializers.ModelSerializer):
