@@ -1,9 +1,9 @@
 from rest_framework import generics
-from .models import Vehicle
+from .models import Vehicle, Vehicle_Status
 from .serializers import VehicleSerializer
-import requests
+from django.shortcuts import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -60,3 +60,18 @@ class VehicleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def toggle_vehicle_status(request, pk):
+    vehicle = get_object_or_404(Vehicle, pk=pk)
+    
+    if vehicle.status.description == "Available":
+        vehicle.status = Vehicle_Status.objects.get(description="Unavailable")
+    else:
+        vehicle.status = Vehicle_Status.objects.get(description="Available")
+    
+    vehicle.save()
+    
+    return Response({'message': 'Vehicle status changed successfully.', 'status': vehicle.status.description}, status=status.HTTP_200_OK)
+
