@@ -70,3 +70,28 @@ class RequestApprovedView(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
+    
+class RequestCancelView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        if instance.status.description == 'Canceled':
+            return Response({'message': 'Request is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        instance.status = Request_Status.objects.get(description='Canceled')
+        instance.save()
+
+        if instance.vehicle:
+           
+            try:
+                vehicle = instance.vehicle
+                available_status = Vehicle_Status.objects.get(description='Available')
+                vehicle.status = available_status
+                vehicle.save()
+            except Vehicle.DoesNotExist:
+                pass  
+
+        return Response({'message': 'Request canceled successfully.'})
