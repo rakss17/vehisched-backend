@@ -20,7 +20,7 @@ class Request_Status(models.Model):
 class Request (models.Model):
     request_id = models.AutoField(primary_key=True)
     requester_name = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True)
+        User, on_delete=models.CASCADE, null=True, blank=True)
     travel_date = models.DateField()
     travel_time = models.TimeField()
     destination = models.CharField(max_length=255, null=True, blank=True)
