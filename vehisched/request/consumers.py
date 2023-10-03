@@ -7,14 +7,17 @@ from .models import Request
 from django.utils import timezone
 
 
+
 class RequestConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        # Authenticate the user here if necessary
+        
         await self.accept()
-        await self.channel_layer.group_add("request_status_approved", self.channel_name)
+        requester_name = self.scope.get('query_string').decode('utf-8').split('=')[1]
+        await self.channel_layer.group_add(f"user_{requester_name}", self.channel_name)
 
     async def disconnect(self, close_code):
-        await self.channel_layer.group_discard("request_status_approved", self.channel_name)
+        requester_name = self.scope.get('query_string').decode('utf-8').split('=')[1]
+        await self.channel_layer.group_discard(f"user_{requester_name}", self.channel_name)
 
     async def receive(self, text_data):
         data = json.loads(text_data)
@@ -24,7 +27,7 @@ class RequestConsumer(AsyncWebsocketConsumer):
             await self.approve_notification({
                 'message': 'Notification message goes here' 
             })
+
     async def approve_notification(self, event):
-        # Send a notification to the owner of the request when it's approved
         message = event['message']
-        await self.send(text_data=json.dumps({'type': 'approve.notification','message': message}))
+        await self.send(text_data=json.dumps({'type': 'approve.notification','message': message, 'status': 'Approved'}))
