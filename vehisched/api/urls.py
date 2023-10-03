@@ -6,4 +6,5 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('request/', include('request.urls')),
     path('vehicles/', include('vehicle.urls')),
+    path('notification/', include('notification.urls'))
 ]

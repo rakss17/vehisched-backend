@@ -12,6 +12,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         queryset = Request.objects.filter(requester_name=user)
+
+        Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
 
 
