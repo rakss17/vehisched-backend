@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from .models import Request, Request_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
+from notification.models import Notification
 import json
 
 class RequestListCreateView(generics.ListCreateAPIView):
@@ -64,6 +65,12 @@ class RequestApprovedView(generics.UpdateAPIView):
             approved_status = Request_Status.objects.get(description='Approved')
             instance.status = approved_status
             instance.save()
+
+            notification = Notification(
+                owner=instance.requester_name,  # Set the owner of the notification (adjust this based on your use case)
+                subject=f"Request {instance.request_id} has been approved",  # Set the subject of the notification
+            )
+            notification.save()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
