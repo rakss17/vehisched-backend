@@ -4,6 +4,8 @@ from .models import Request, Request_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 from notification.models import Notification
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 import json
 
 class RequestListCreateView(generics.ListCreateAPIView):
@@ -16,6 +18,13 @@ class RequestListCreateView(generics.ListCreateAPIView):
         Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
 
+    def send_websocket_notification(self, message):
+        channel_layer = get_channel_layer()
+        event = {
+            'type': 'notify.request_created',
+            'message': message,
+        }
+        async_to_sync(channel_layer.group_send)('notifications', event)
 
     def create(self, request, *args, **kwargs):
         passenger_names = request.data.get('passenger_names', [])
@@ -28,13 +37,11 @@ class RequestListCreateView(generics.ListCreateAPIView):
         plate_number = request.data.get('vehicle')
        
         if plate_number:
-           
             try:
                 vehicle = Vehicle.objects.get(plate_number=plate_number)
                 print("vehicle", vehicle)
                
                 if vehicle.status.description == 'Available':
-         
                     reserved_status = Vehicle_Status.objects.get(description='Reserved')
                     vehicle.status = reserved_status
                     vehicle.save()
@@ -42,8 +49,32 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     return Response({'message': 'Vehicle is not available for reservation.'}, status=400)
             except Vehicle.DoesNotExist:
                 return Response({'message': 'Vehicle not found.'}, status=404)
+        
 
-        return super().create(request, *args, **kwargs)
+        new_request = Request.objects.create(
+        requester_name=self.request.user,
+        travel_date=request.data['travel_date'],
+        travel_time=request.data['travel_time'],
+        destination=request.data['destination'],
+        office_or_dept=request.data['office_or_dept'],
+        number_of_passenger=request.data['number_of_passenger'],
+        passenger_names=passenger_names,
+        purpose=request.data['purpose'],
+        is_approved=False,  
+        status=Request_Status.objects.get(description='Pending'),  
+        vehicle=vehicle  
+    )
+
+   
+        notification = Notification(
+            owner=self.request.user,
+            subject=f"Request {new_request.request_id} has been created",
+        )
+        notification.save()
+        message = "A new request has been created."
+        self.send_websocket_notification(message)
+
+        return Response(RequestSerializer(new_request).data, status=201)
 
 
 class RequestListOfficeStaffView(generics.ListAPIView):
@@ -69,8 +100,8 @@ class RequestApprovedView(generics.UpdateAPIView):
             instance.save()
 
             notification = Notification(
-                owner=instance.requester_name,  # Set the owner of the notification (adjust this based on your use case)
-                subject=f"Request {instance.request_id} has been approved",  # Set the subject of the notification
+                owner=instance.requester_name,  
+                subject=f"Request {instance.request_id} has been approved",  
             )
             notification.save()
 
