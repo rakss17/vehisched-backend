@@ -59,7 +59,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         
             notification = Notification(
                 owner=user,
-                subject=f"A new request has been created",
+                subject=f"A new request has been created by {self.request.user}",
             )
             notification.save()
         
@@ -84,7 +84,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
             subject=f"Request {new_request.request_id} has been created",
         )
         notification.save()
-        message = "A new request has been created."
+        message = f"A new request has been created by {self.request.user}"
         self.send_websocket_notification(message)
 
         return Response(RequestSerializer(new_request).data, status=201)
@@ -137,8 +137,19 @@ class RequestCancelView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
 
+    def send_websocket_notification(self, message):
+        channel_layer = get_channel_layer()
+        event = {
+            'type': 'notify.request_canceled',
+            'message': message,
+        }
+        async_to_sync(channel_layer.group_send)('notifications', event)
+
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+
+        office_staff_role = Role.objects.get(role_name='office staff')     
+        office_staff_users = User.objects.filter(role=office_staff_role)
 
         if instance.status.description == 'Canceled':
             return Response({'message': 'Request is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -154,6 +165,16 @@ class RequestCancelView(generics.UpdateAPIView):
                 vehicle.status = available_status
                 vehicle.save()
             except Vehicle.DoesNotExist:
-                pass  
+                pass
+
+        for user in office_staff_users:
+        
+            notification = Notification(
+                owner=user,
+                subject=f"A request has been canceled by {self.request.user}",
+            )
+            notification.save()
+        message = f"A request has been canceled by {self.request.user}"
+        self.send_websocket_notification(message)  
 
         return Response({'message': 'Request canceled successfully.'})

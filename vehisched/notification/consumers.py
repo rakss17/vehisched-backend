@@ -13,10 +13,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         action = data.get('action')
+        print(action)
 
         if action == 'created':
             await self.notify_request_created({
-                'message': 'Notification message goes here' 
+                'message': 'Notification message goes here for created' 
+            })
+        elif action == 'canceled':
+            await self.notify_request_canceled({
+                'message': 'Notification message goes here for canceled' 
             })
 
 
@@ -24,4 +29,10 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_created",
+            "message": message,}))
+        
+    async def notify_request_canceled(self, event):
+    
+        message = event["message"]
+        await self.send(text_data=json.dumps({"type": "notify.request_canceled",
             "message": message,}))
