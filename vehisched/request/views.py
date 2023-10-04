@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Request_Status
+from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 from notification.models import Notification
@@ -28,6 +29,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         passenger_names = request.data.get('passenger_names', [])
+        office_staff_role = Role.objects.get(role_name='office staff')
+
+        
+        office_staff_users = User.objects.filter(role=office_staff_role)
 
         try:
             passenger_names = json.loads(passenger_names)
@@ -49,6 +54,14 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     return Response({'message': 'Vehicle is not available for reservation.'}, status=400)
             except Vehicle.DoesNotExist:
                 return Response({'message': 'Vehicle not found.'}, status=404)
+        
+        for user in office_staff_users:
+        
+            notification = Notification(
+                owner=user,
+                subject=f"A new request has been created",
+            )
+            notification.save()
         
 
         new_request = Request.objects.create(
@@ -80,6 +93,15 @@ class RequestListCreateView(generics.ListCreateAPIView):
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
     queryset = Request.objects.all()
+
+    def list(self, request, *args, **kwargs):
+        office_staff_role = Role.objects.get(role_name='office staff')
+        office_staff_users = User.objects.filter(role=office_staff_role)
+
+        for user in office_staff_users:
+            Notification.objects.filter(owner=user).update(read_status=True)
+
+        return super().list(request, *args, **kwargs)
     
 
 
