@@ -40,4 +40,4 @@ class TripTicket(models.Model):
     qr_code_data = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return self.driver_name
+        return self.authorized_passenger

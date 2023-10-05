@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Request_Status
+from tripticket.models import TripTicket
 from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
@@ -116,10 +117,27 @@ class RequestApprovedView(generics.UpdateAPIView):
         is_approving = request.data.get('is_approved', False)
 
         if is_approving:
-            
+
+            driver_id = request.data.get('driver_id')  
+            driver = User.objects.get(id=driver_id) 
+
             approved_status = Request_Status.objects.get(description='Approved')
             instance.status = approved_status
             instance.save()
+
+            requester_name = instance.requester_name
+            requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
+
+           
+            plate_number = instance.vehicle
+            authorized_passenger = f"{requester_full_name}, {instance.passenger_names}"
+            trip_ticket = TripTicket(
+                driver_name=driver,
+                plate_number=plate_number,
+                authorized_passenger=authorized_passenger,
+                request_number=instance,
+            )
+            trip_ticket.save()
 
             notification = Notification(
                 owner=instance.requester_name,  
