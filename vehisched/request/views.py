@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Request_Status
 from tripticket.models import TripTicket
-from accounts.models import Role, User
+from accounts.models import Role, User, Driver_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 from notification.models import Notification
@@ -103,10 +103,8 @@ class RequestListOfficeStaffView(generics.ListAPIView):
             Notification.objects.filter(owner=user).update(read_status=True)
 
         return super().list(request, *args, **kwargs)
-    
-
-
-
+ 
+ 
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
@@ -120,9 +118,11 @@ class RequestApprovedView(generics.UpdateAPIView):
 
             driver_id = request.data.get('driver_id')  
             driver = User.objects.get(id=driver_id) 
+            driver_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
 
             approved_status = Request_Status.objects.get(description='Approved')
             instance.status = approved_status
+            instance.driver_name = driver_name 
             instance.save()
 
             requester_name = instance.requester_name
@@ -138,6 +138,10 @@ class RequestApprovedView(generics.UpdateAPIView):
                 request_number=instance,
             )
             trip_ticket.save()
+
+            driver_status = Driver_Status.objects.get(user=driver)
+            driver_status.status = 'On trip'
+            driver_status.save()
 
             notification = Notification(
                 owner=instance.requester_name,  
@@ -174,6 +178,14 @@ class RequestCancelView(generics.UpdateAPIView):
 
         instance.status = Request_Status.objects.get(description='Canceled')
         instance.save()
+
+        trip_ticket = TripTicket.objects.get(request_number=instance)
+
+        driver = trip_ticket.driver_name
+
+        driver_status = Driver_Status.objects.get(user=driver)
+        driver_status.status = 'Available'
+        driver_status.save()
 
         if instance.vehicle:
            
