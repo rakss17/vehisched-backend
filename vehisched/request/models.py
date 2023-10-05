@@ -34,6 +34,7 @@ class Request (models.Model):
     vehicle = models.ForeignKey(
         Vehicle, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    driver_name = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
         return self.office_or_dept

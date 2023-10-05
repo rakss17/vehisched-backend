@@ -103,10 +103,8 @@ class RequestListOfficeStaffView(generics.ListAPIView):
             Notification.objects.filter(owner=user).update(read_status=True)
 
         return super().list(request, *args, **kwargs)
-    
-
-
-
+ 
+ 
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
@@ -120,9 +118,11 @@ class RequestApprovedView(generics.UpdateAPIView):
 
             driver_id = request.data.get('driver_id')  
             driver = User.objects.get(id=driver_id) 
+            driver_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
 
             approved_status = Request_Status.objects.get(description='Approved')
             instance.status = approved_status
+            instance.driver_name = driver_name 
             instance.save()
 
             requester_name = instance.requester_name
