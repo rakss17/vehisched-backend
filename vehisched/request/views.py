@@ -179,6 +179,14 @@ class RequestCancelView(generics.UpdateAPIView):
         instance.status = Request_Status.objects.get(description='Canceled')
         instance.save()
 
+        trip_ticket = TripTicket.objects.get(request_number=instance)
+
+        driver = trip_ticket.driver_name
+
+        driver_status = Driver_Status.objects.get(user=driver)
+        driver_status.status = 'Available'
+        driver_status.save()
+
         if instance.vehicle:
            
             try:

@@ -31,4 +31,4 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
         model = Request
         fields = ['request_id', 'requester_last_name', 'requester_first_name', 'requester_middle_name', 
                   'travel_date', 'travel_time', 'destination', 'office_or_dept', 'number_of_passenger', 
-                  'passenger_names', 'purpose', 'is_approved', 'status', 'vehicle', 'created_at']
+                  'passenger_names', 'purpose', 'is_approved', 'status', 'vehicle', 'created_at', 'driver_name']
