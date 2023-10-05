@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Request_Status
 from tripticket.models import TripTicket
-from accounts.models import Role, User
+from accounts.models import Role, User, Driver_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
 from notification.models import Notification
@@ -138,6 +138,10 @@ class RequestApprovedView(generics.UpdateAPIView):
                 request_number=instance,
             )
             trip_ticket.save()
+
+            driver_status = Driver_Status.objects.get(user=driver)
+            driver_status.status = 'On trip'
+            driver_status.save()
 
             notification = Notification(
                 owner=instance.requester_name,  
