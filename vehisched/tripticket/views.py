@@ -28,3 +28,26 @@ class ScheduleRequesterView(generics.ListAPIView):
             })
 
         return JsonResponse(trip_data, safe=False)
+    
+class ScheduleOfficeStaffView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+        trip_data = []
+        trip_tickets = TripTicket.objects.all()
+
+        for ticket in trip_tickets:
+            request_data = Request.objects.get(request_id=ticket.request_number.request_id)
+            driver_data = User.objects.get(username=ticket.driver_name)
+            trip_data.append({
+                'tripticket_id': ticket.id,
+                'request_id': request_data.request_id,
+                'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}",
+                'travel_date': request_data.travel_date,
+                'travel_time': request_data.travel_time,
+                'driver': request_data.driver_name,
+                'contact_no_of_driver': driver_data.mobile_number,
+                'destination': request_data.destination,
+                'vehicle': request_data.vehicle.plate_number,
+                'status': ticket.status.description,
+            })
+
+        return JsonResponse(trip_data, safe=False)
