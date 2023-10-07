@@ -19,6 +19,16 @@ class Speedometer(models.Model):
     beginning_of_trip = models.IntegerField(null=True, blank=True)
     distance_traveled = models.IntegerField(null=True, blank=True)
 
+class TripTicket_Status(models.Model):
+    description = models.CharField(primary_key=True, max_length=255, choices=[
+        ('Scheduled', 'Scheduled'),
+        ('Canceled', 'Canceled'),
+        ('Reschedule', 'Reschedule'),
+        ('Completed', 'Completed'),
+    ])
+
+    def __str__(self):
+        return self.description
 
 class TripTicket(models.Model):
     driver_name = models.ForeignKey(
@@ -37,6 +47,8 @@ class TripTicket(models.Model):
         FuelStatus, on_delete=models.SET_NULL, null=True, blank=True)
     speedometer = models.OneToOneField(
         Speedometer, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.ForeignKey(
+        TripTicket_Status, on_delete=models.SET_NULL, null=True, blank=True, default="Scheduled")
     qr_code_data = models.TextField(null=True, blank=True)
 
     def __str__(self):
