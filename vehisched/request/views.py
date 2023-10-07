@@ -1,7 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Request_Status
-from tripticket.models import TripTicket
+from tripticket.models import TripTicket, TripTicket_Status
 from accounts.models import Role, User, Driver_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle, Vehicle_Status
@@ -180,6 +180,10 @@ class RequestCancelView(generics.UpdateAPIView):
         instance.save()
 
         trip_ticket = TripTicket.objects.get(request_number=instance)
+
+        trip_ticket_status_canceled = TripTicket_Status.objects.get(description='Canceled')
+        trip_ticket.status = trip_ticket_status_canceled
+        trip_ticket.save()
 
         driver = trip_ticket.driver_name
 
