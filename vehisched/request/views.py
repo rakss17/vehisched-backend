@@ -179,17 +179,22 @@ class RequestCancelView(generics.UpdateAPIView):
         instance.status = Request_Status.objects.get(description='Canceled')
         instance.save()
 
-        trip_ticket = TripTicket.objects.get(request_number=instance)
+        request_status = request.data.get('selected_status')
+        
+        if request_status == 'Approved':
+            trip_ticket = TripTicket.objects.get(request_number=instance)
 
-        trip_ticket_status_canceled = TripTicket_Status.objects.get(description='Canceled')
-        trip_ticket.status = trip_ticket_status_canceled
-        trip_ticket.save()
+            trip_ticket_status_canceled = TripTicket_Status.objects.get(description='Canceled')
+            trip_ticket.status = trip_ticket_status_canceled
+            trip_ticket.save()
 
-        driver = trip_ticket.driver_name
+            driver = trip_ticket.driver_name
 
-        driver_status = Driver_Status.objects.get(user=driver)
-        driver_status.status = 'Available'
-        driver_status.save()
+            driver_status = Driver_Status.objects.get(user=driver)
+            driver_status.status = 'Available'
+            driver_status.save()
+
+        
 
         if instance.vehicle:
            
