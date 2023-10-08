@@ -32,7 +32,7 @@ class ScheduleRequesterView(generics.ListAPIView):
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
-        trip_tickets = TripTicket.objects.all()
+        trip_tickets = TripTicket.objects.filter(status__description="Scheduled")
 
         for ticket in trip_tickets:
             request_data = Request.objects.get(request_id=ticket.request_number.request_id)
@@ -51,3 +51,4 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
             })
 
         return JsonResponse(trip_data, safe=False)
+
