@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
-        trip_tickets = TripTicket.objects.filter(request_number__requester_name=request.user)
+        trip_tickets = TripTicket.objects.filter(request_number__requester_name=request.user, status__description="Scheduled")
 
         if not trip_tickets:
             raise PermissionDenied
