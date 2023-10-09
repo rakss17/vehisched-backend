@@ -7,5 +7,7 @@ urlpatterns = [
          name='schedule-requester'),
     path('fetch-office-staff/', views.ScheduleOfficeStaffView.as_view(),
     name='schedule-office-staff'),
+    path('check-vehicle-availability/', views.CheckVehicleAvailability.as_view(),
+    name='check-vehicle-availability'),
    
 ]
