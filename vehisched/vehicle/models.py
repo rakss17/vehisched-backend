@@ -19,8 +19,6 @@ class Vehicle(models.Model):
     vehicle_name = models.CharField(max_length=255, null=True, blank=True)
     vehicle_type = models.CharField(max_length=255, null=True, blank=True)
     capacity = models.IntegerField(null=True, blank=True)
-    status = models.ForeignKey(
-        Vehicle_Status, on_delete=models.SET_NULL, null=True, blank=True, default="Available")
     is_vip = models.BooleanField(default=False)
     vehicle_image = models.ImageField(
         upload_to='vehicle_images/', null=True, blank=True)

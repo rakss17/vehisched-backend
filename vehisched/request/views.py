@@ -69,6 +69,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
         requester_name=self.request.user,
         travel_date=request.data['travel_date'],
         travel_time=request.data['travel_time'],
+        return_date=request.data['return_date'],
+        return_time=request.data['return_time'],
         destination=request.data['destination'],
         office_or_dept=request.data['office_or_dept'],
         number_of_passenger=request.data['number_of_passenger'],

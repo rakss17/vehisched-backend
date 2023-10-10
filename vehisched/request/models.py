@@ -21,8 +21,10 @@ class Request (models.Model):
     request_id = models.AutoField(primary_key=True)
     requester_name = models.ForeignKey(
         User, on_delete=models.CASCADE, null=True, blank=True)
-    travel_date = models.DateField()
-    travel_time = models.TimeField()
+    travel_date = models.DateField(null=True, blank=True)
+    travel_time = models.TimeField(null=True, blank=True)
+    return_date = models.DateField(null=True, blank=True)
+    return_time = models.TimeField(null=True, blank=True)
     destination = models.CharField(max_length=255, null=True, blank=True)
     office_or_dept = models.CharField(max_length=255, null=True, blank=True)
     number_of_passenger = models.IntegerField(null=True, blank=True)
