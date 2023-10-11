@@ -7,7 +7,6 @@ from vehicle.models import Vehicle
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
-from datetime import datetime
 
 class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
@@ -24,6 +23,8 @@ class ScheduleRequesterView(generics.ListAPIView):
                 'tripticket_id': ticket.id,
                 'travel_date': request_data.travel_date,
                 'travel_time': request_data.travel_time,
+                'return_date': request_data.return_date,
+                'return_time': request_data.return_time,
                 'driver': request_data.driver_name,
                 'contact_no_of_driver': driver_data.mobile_number,
                 'destination': request_data.destination,
@@ -57,11 +58,6 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
         return JsonResponse(trip_data, safe=False)
 
 
-
-
-
-from django.db.models import Q
-
 class CheckVehicleAvailability(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
@@ -76,6 +72,9 @@ class CheckVehicleAvailability(generics.ListAPIView):
                 Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
                 ~Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time]) &
                 ~Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])     
             ) | (
                 Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
                 Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time]) 

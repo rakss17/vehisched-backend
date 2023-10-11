@@ -199,17 +199,21 @@ class RequestCancelView(generics.UpdateAPIView):
             driver_status.status = 'Available'
             driver_status.save()
 
+            vehicle_status_available = Vehicle_Status.objects.get(description='Available')
+            trip_ticket.vehicle_status = vehicle_status_available
+            trip_ticket.save()
+
         
 
-        if instance.vehicle:
+        # if instance.vehicle:
            
-            try:
-                vehicle = instance.vehicle
-                available_status = Vehicle_Status.objects.get(description='Available')
-                vehicle.status = available_status
-                vehicle.save()
-            except Vehicle.DoesNotExist:
-                pass
+        #     try:
+        #         vehicle = instance.vehicle
+        #         available_status = Vehicle_Status.objects.get(description='Available')
+        #         vehicle.status = available_status
+        #         vehicle.save()
+        #     except Vehicle.DoesNotExist:
+        #         pass
 
         for user in office_staff_users:
         
