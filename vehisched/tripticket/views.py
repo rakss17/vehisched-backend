@@ -48,6 +48,8 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
                 'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}",
                 'travel_date': request_data.travel_date,
                 'travel_time': request_data.travel_time,
+                'return_date': request_data.return_date,
+                'return_time': request_data.return_time,
                 'driver': request_data.driver_name,
                 'contact_no_of_driver': driver_data.mobile_number,
                 'destination': request_data.destination,
