@@ -9,6 +9,9 @@ from notification.models import Notification
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import json
+from django.db.models import Q
+
+from django.core.exceptions import ValidationError
 
 class RequestListCreateView(generics.ListCreateAPIView):
     serializer_class = RequestSerializer
@@ -32,7 +35,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         passenger_names = request.data.get('passenger_names', [])
         office_staff_role = Role.objects.get(role_name='office staff')
 
-        
         office_staff_users = User.objects.filter(role=office_staff_role)
 
         try:
@@ -40,24 +42,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         except json.JSONDecodeError:
             return Response({'passenger_names': ['Invalid JSON data.']}, status=400)
 
-        # plate_number = request.data.get('vehicle')
-       
-        # if plate_number:
-        #     try:
-        #         vehicle = Vehicle.objects.get(plate_number=plate_number)
-        #         print("vehicle", vehicle)
-               
-        #         if vehicle.status.description == 'Available':
-        #             reserved_status = Vehicle_Status.objects.get(description='Reserved')
-        #             vehicle.status = reserved_status
-        #             vehicle.save()
-        #         else:
-        #             return Response({'message': 'Vehicle is not available for reservation.'}, status=400)
-        #     except Vehicle.DoesNotExist:
-        #         return Response({'message': 'Vehicle not found.'}, status=404)
-        
         for user in office_staff_users:
-        
             notification = Notification(
                 owner=user,
                 subject=f"A new request has been created by {self.request.user}",
@@ -65,26 +50,67 @@ class RequestListCreateView(generics.ListCreateAPIView):
             notification.save()
 
         plate_number = request.data.get('vehicle')
-        
-        vehicle = Vehicle.objects.get(plate_number=plate_number)
-        
-        new_request = Request.objects.create(
-        requester_name=self.request.user,
-        travel_date=request.data['travel_date'],
-        travel_time=request.data['travel_time'],
-        return_date=request.data['return_date'],
-        return_time=request.data['return_time'],
-        destination=request.data['destination'],
-        office_or_dept=request.data['office_or_dept'],
-        number_of_passenger=request.data['number_of_passenger'],
-        passenger_names=passenger_names,
-        purpose=request.data['purpose'],
-        is_approved=False,  
-        status=Request_Status.objects.get(description='Pending'),  
-        vehicle=vehicle  
-    )
 
-   
+        vehicle = Vehicle.objects.get(plate_number=plate_number)
+
+        travel_date = request.data['travel_date']
+        travel_time = request.data['travel_time']
+        return_date = request.data['return_date']
+        return_time = request.data['return_time']
+
+        # Check if the vehicle is already reserved within the specified date and time range
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                ~Q(travel_time__range=[travel_time, return_time]) &
+                ~Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date]) |
+                ~Q(travel_time__range=[travel_time, return_time]) |
+                ~Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            vehicle__tripticket__vehicle_status__in=['Reserved', 'On trip', 'Unavailable'],
+            status__in=['Pending', 'Approved', 'Reschedule']
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected vehicle is already reserved within the specified date and time range."
+            return Response({'error': error_message}, status=400)
+
+
+
+
+        new_request = Request.objects.create(
+            requester_name=self.request.user,
+            travel_date=travel_date,
+            travel_time=travel_time,
+            return_date=return_date,
+            return_time=return_time,
+            destination=request.data['destination'],
+            office_or_dept=request.data['office_or_dept'],
+            number_of_passenger=request.data['number_of_passenger'],
+            passenger_names=passenger_names,
+            purpose=request.data['purpose'],
+            is_approved=False,
+            status=Request_Status.objects.get(description='Pending'),
+            vehicle=vehicle
+        )
+
         notification = Notification(
             owner=self.request.user,
             subject=f"Request {new_request.request_id} has been created",
@@ -94,6 +120,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
         self.send_websocket_notification(message)
 
         return Response(RequestSerializer(new_request).data, status=201)
+
+
 
 
 class RequestListOfficeStaffView(generics.ListAPIView):
