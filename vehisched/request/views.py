@@ -40,21 +40,21 @@ class RequestListCreateView(generics.ListCreateAPIView):
         except json.JSONDecodeError:
             return Response({'passenger_names': ['Invalid JSON data.']}, status=400)
 
-        plate_number = request.data.get('vehicle')
+        # plate_number = request.data.get('vehicle')
        
-        if plate_number:
-            try:
-                vehicle = Vehicle.objects.get(plate_number=plate_number)
-                print("vehicle", vehicle)
+        # if plate_number:
+        #     try:
+        #         vehicle = Vehicle.objects.get(plate_number=plate_number)
+        #         print("vehicle", vehicle)
                
-                if vehicle.status.description == 'Available':
-                    reserved_status = Vehicle_Status.objects.get(description='Reserved')
-                    vehicle.status = reserved_status
-                    vehicle.save()
-                else:
-                    return Response({'message': 'Vehicle is not available for reservation.'}, status=400)
-            except Vehicle.DoesNotExist:
-                return Response({'message': 'Vehicle not found.'}, status=404)
+        #         if vehicle.status.description == 'Available':
+        #             reserved_status = Vehicle_Status.objects.get(description='Reserved')
+        #             vehicle.status = reserved_status
+        #             vehicle.save()
+        #         else:
+        #             return Response({'message': 'Vehicle is not available for reservation.'}, status=400)
+        #     except Vehicle.DoesNotExist:
+        #         return Response({'message': 'Vehicle not found.'}, status=404)
         
         for user in office_staff_users:
         
@@ -63,8 +63,11 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 subject=f"A new request has been created by {self.request.user}",
             )
             notification.save()
-        
 
+        plate_number = request.data.get('vehicle')
+        
+        vehicle = Vehicle.objects.get(plate_number=plate_number)
+        
         new_request = Request.objects.create(
         requester_name=self.request.user,
         travel_date=request.data['travel_date'],
