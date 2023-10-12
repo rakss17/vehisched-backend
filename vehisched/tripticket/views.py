@@ -7,6 +7,7 @@ from vehicle.models import Vehicle
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 
 class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
@@ -147,6 +148,33 @@ class CheckDriverAvailability(generics.ListAPIView):
         return JsonResponse(available_drivers, safe=False)
 
 
+class VehicleSchedulesView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+        plate_number = self.request.GET.get('plate_number')
+        trip_data = []
+        print('PLATE NUMBBBER', plate_number)
+
+        trip_tickets = TripTicket.objects.filter(status__description="Scheduled", request_number__vehicle__plate_number=plate_number)
+
+        for ticket in trip_tickets:
+            request_data = get_object_or_404(Request, request_id=ticket.request_number.request_id)
+            driver_data = get_object_or_404(User, username=ticket.driver_name)
+            trip_data.append({
+                'tripticket_id': ticket.id,
+                'request_id': request_data.request_id,
+                'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}",
+                'travel_date': request_data.travel_date,
+                'travel_time': request_data.travel_time,
+                'return_date': request_data.return_date,
+                'return_time': request_data.return_time,
+                'driver': request_data.driver_name,
+                'contact_no_of_driver': driver_data.mobile_number,
+                'destination': request_data.destination,
+                'vehicle': request_data.vehicle.plate_number,
+                'status': ticket.status.description,
+            })
+
+        return JsonResponse(trip_data, safe=False)
 
 
 

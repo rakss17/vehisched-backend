@@ -11,4 +11,6 @@ urlpatterns = [
     name='check-vehicle-availability'),
     path('check-driver-availability/', views.CheckDriverAvailability.as_view(),
     name='check-driver-availability'),  
+    path('vehicle-schedules/', views.VehicleSchedulesView.as_view(),
+    name='vehicle-schedules'),  
 ]
