@@ -103,6 +103,49 @@ class CheckVehicleAvailability(generics.ListAPIView):
 
         return JsonResponse(available_vehicles, safe=False)
 
+    
+class CheckDriverAvailability(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+        preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
+        preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
+        preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
+        preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+
+
+        unavailable_drivers = TripTicket.objects.filter(
+            (
+                Q(request_number__travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(request_number__return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                ~Q(request_number__travel_time__range=[preferred_start_travel_time, preferred_end_travel_time]) &
+                ~Q(request_number__return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(request_number__travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(request_number__return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(request_number__travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(request_number__travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(request_number__return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(request_number__return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(request_number__travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(request_number__return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(request_number__travel_time__gte=preferred_start_travel_time) &
+                Q(request_number__return_time__lte=preferred_end_travel_time)
+            ),
+            driver_status__description__in=['Assigned', 'On trip', 'Unavailable'],
+            request_number__status__description__in=['Pending', 'Approved', 'Reschedule'],
+        ).exclude(
+            (Q(request_number__travel_date=preferred_end_travel_date) & Q(request_number__travel_time__gte=preferred_end_travel_time)) |
+            (Q(request_number__return_date=preferred_start_travel_date) & Q(request_number__return_time__lte=preferred_start_travel_time))
+        ).values_list('driver_name__username', flat=True)
+
+        available_drivers = User.objects.filter(role__role_name='driver').exclude(username__in=unavailable_drivers)
+
+        available_drivers = list(available_drivers.values('id', 'first_name', 'last_name', 'middle_name', 'role_id', 'username', 'email'))
+
+        return JsonResponse(available_drivers, safe=False)
+
 
 
 

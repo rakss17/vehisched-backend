@@ -16,6 +16,18 @@ class Role(models.Model):
 
     def __str__(self):
         return self.role_name
+    
+
+class Driver_Status(models.Model):
+    description = models.CharField(primary_key=True,max_length=255, choices=[
+        ('Available', 'Available'),
+        ('On trip', 'On Trip'),
+        ('Unavailable', 'Unavailable'),
+        ('Assigned', 'Assigned')
+    ])
+
+    def __str__(self):
+        return self.description
 
 
 class User(AbstractUser):
@@ -28,13 +40,8 @@ class User(AbstractUser):
         return self.username
 
 
-class Driver_Status(models.Model):
-    user = models.OneToOneField(
-        'User', on_delete=models.CASCADE, primary_key=True)
-    status = models.CharField(max_length=255, choices=[
-        ('Available', 'Available'),
-        ('On trip', 'On Trip'),
-        ('Unavailable', 'Unavailable')
-    ], default='Available')
+
+
+
 
 

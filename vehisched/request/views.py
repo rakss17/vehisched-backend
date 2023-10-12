@@ -11,7 +11,6 @@ from asgiref.sync import async_to_sync
 import json
 from django.db.models import Q
 
-from django.core.exceptions import ValidationError
 
 class RequestListCreateView(generics.ListCreateAPIView):
     serializer_class = RequestSerializer
@@ -58,7 +57,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return_date = request.data['return_date']
         return_time = request.data['return_time']
 
-        # Check if the vehicle is already reserved within the specified date and time range
         if Request.objects.filter(
             (
                 Q(travel_date__range=[travel_date, return_date]) &
@@ -91,9 +89,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         ).exists():
             error_message = "The selected vehicle is already reserved within the specified date and time range."
             return Response({'error': error_message}, status=400)
-
-
-
 
         new_request = Request.objects.create(
             requester_name=self.request.user,
@@ -161,7 +156,8 @@ class RequestApprovedView(generics.UpdateAPIView):
             requester_name = instance.requester_name
             requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
 
-           
+            driver_status = Driver_Status.objects.get(description='Assigned')
+
             plate_number = instance.vehicle
             authorized_passenger = f"{requester_full_name}, {instance.passenger_names}"
             trip_ticket = TripTicket(
@@ -169,12 +165,11 @@ class RequestApprovedView(generics.UpdateAPIView):
                 plate_number=plate_number,
                 authorized_passenger=authorized_passenger,
                 request_number=instance,
+                driver_status = driver_status
             )
             trip_ticket.save()
 
-            driver_status = Driver_Status.objects.get(user=driver)
-            driver_status.status = 'On trip'
-            driver_status.save()
+            
 
             notification = Notification(
                 owner=instance.requester_name,  
@@ -221,27 +216,15 @@ class RequestCancelView(generics.UpdateAPIView):
             trip_ticket.status = trip_ticket_status_canceled
             trip_ticket.save()
 
-            driver = trip_ticket.driver_name
 
-            driver_status = Driver_Status.objects.get(user=driver)
-            driver_status.status = 'Available'
-            driver_status.save()
+            driver_status = Driver_Status.objects.get(description='Available')
+            trip_ticket.driver_status = driver_status
 
             vehicle_status_available = Vehicle_Status.objects.get(description='Available')
             trip_ticket.vehicle_status = vehicle_status_available
             trip_ticket.save()
 
         
-
-        # if instance.vehicle:
-           
-        #     try:
-        #         vehicle = instance.vehicle
-        #         available_status = Vehicle_Status.objects.get(description='Available')
-        #         vehicle.status = available_status
-        #         vehicle.save()
-        #     except Vehicle.DoesNotExist:
-        #         pass
 
         for user in office_staff_users:
         

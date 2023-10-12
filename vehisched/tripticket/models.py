@@ -1,5 +1,5 @@
 from django.db import models
-from accounts.models import User
+from accounts.models import User, Driver_Status
 from vehicle.models import Vehicle, Vehicle_Status
 from request.models import Request
 
@@ -52,6 +52,8 @@ class TripTicket(models.Model):
     qr_code_data = models.TextField(null=True, blank=True)
     vehicle_status = models.ForeignKey(
         Vehicle_Status, on_delete=models.SET_NULL, null=True, blank=True, default="Reserved")
+    driver_status = models.ForeignKey(
+        Driver_Status, on_delete=models.SET_NULL, null=True, blank=True, default="Assigned")
 
     def __str__(self):
         return self.authorized_passenger

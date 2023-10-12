@@ -9,5 +9,6 @@ urlpatterns = [
     name='schedule-office-staff'),
     path('check-vehicle-availability/', views.CheckVehicleAvailability.as_view(),
     name='check-vehicle-availability'),
-   
+    path('check-driver-availability/', views.CheckDriverAvailability.as_view(),
+    name='check-driver-availability'),  
 ]
