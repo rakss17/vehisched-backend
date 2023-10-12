@@ -12,5 +12,6 @@ urlpatterns = [
     path('roles/by-name/', views.RoleByNameView.as_view(), name='role-by-name'),
     path('me/', views.UserProfileView.as_view(), name='user-profile'),
     path('delete/<int:pk>/', views.UserDeleteView.as_view(), name='user-delete'),
+    path('drivers/', views.DriverListView.as_view(), name='drivers'),
     path('toggle_activation/<int:pk>/', views.toggle_user_activation, name='toggle_user_activation')
 ]

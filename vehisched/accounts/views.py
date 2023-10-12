@@ -154,6 +154,13 @@ class UserDeleteView(generics.DestroyAPIView):
         except User.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
+class DriverListView(generics.ListAPIView):
+    serializer_class = FetchedUserSerializer
+
+    def get_queryset(self):
+        driver_role = Role.objects.get(role_name='driver')
+        queryset = User.objects.filter(role=driver_role)
+        return queryset
 
 
 @api_view(['POST'])
