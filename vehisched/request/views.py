@@ -82,13 +82,45 @@ class RequestListCreateView(generics.ListCreateAPIView):
             ),
             vehicle=vehicle,
             vehicle__tripticket__vehicle_status__in=['Reserved', 'On trip', 'Unavailable'],
-            status__in=['Pending', 'Approved', 'Reschedule']
+            status__in=['Approved', 'Reschedule']
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
             error_message = "The selected vehicle is already reserved within the specified date and time range."
-            return Response({'error': error_message}, status=400)
+            return Response({'error': error_message, "type": "Approved"}, status=400)
+        
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                ~Q(travel_time__range=[travel_time, return_time]) &
+                ~Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date]) |
+                ~Q(travel_time__range=[travel_time, return_time]) |
+                ~Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            status__in=['Pending']
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
+            return Response({'error': error_message, "type": "Pending"}, status=400)
 
         new_request = Request.objects.create(
             requester_name=self.request.user,
