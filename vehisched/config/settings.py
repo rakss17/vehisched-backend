@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -54,6 +55,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'djoser',
     'channels',
+    'django_celery_beat',
     'accounts',
     'request',
     'vehicle',
@@ -177,6 +179,25 @@ CHANNEL_LAYERS = {
     },
 }
 
+# Celery Beat Settings
+# CELERY_BEAT_SCHEDULE = {
+#     'check_travel_dates': {
+#         'task': 'tripticket.views.check_travel_dates',
+#         'schedule': crontab(minute='*/1'),  # Run every 15 minutes
+#     },
+# }
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Manila'
+
+# CELERY_TASK_ALWAYS_EAGER = False
+# CELERY_TASK_EAGER_PROPAGATES = False
+# CELERY_WORKER_REDIRECT_STDOUTS = False
 
 # EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
 # EMAIL_HOST_USER = '72f28f72d261ba'
