@@ -6,13 +6,13 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         schedule, created = IntervalSchedule.objects.get_or_create(
-            every=5,
+            every=1,
             period=IntervalSchedule.MINUTES,
         )
 
         PeriodicTask.objects.create(
             interval=schedule,
-            name='Check travel dates every 5 minutes',
+            name='Check travel dates every minute',
             task='tripticket.tasks.check_travel_dates',
         )
 

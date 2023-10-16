@@ -18,21 +18,38 @@ def check_travel_dates():
         time_zone = timezone.localtime(timezone.now())
 
        
-        if time_zone < travel_datetime - timedelta(days=1):
-            
-            pass
-        elif time_zone < travel_datetime - timedelta(hours=12):
-        
-            pass
-        elif time_zone < travel_datetime - timedelta(hours=1):
-            print('1 hour left')
-            
-            notification = Notification(
-            owner = request_data.requester_name,
-            subject="1 hour left",
-            )
-            notification.save()
+        if time_zone >= travel_datetime - timedelta(days=1):
 
-            pass
+            existing_notification = Notification.objects.filter(owner=request_data.requester_name, subject="This is to remind you that you have a scheduled travel in 24 hours", purpose=ticket.id).exists()
+            if not existing_notification:
+                notification = Notification(
+                    owner=request_data.requester_name,
+                    subject="This is to remind you that you have a scheduled travel in 24 hours",
+                    purpose=ticket.id
+                )
+                notification.save()
+            
+        if time_zone >= travel_datetime - timedelta(hours=12):
+
+            existing_notification = Notification.objects.filter(owner=request_data.requester_name, subject="Only 12 hours left until your travel begins. Make sure you're all set!", purpose=ticket.id).exists()
+            if not existing_notification:
+                notification = Notification(
+                    owner=request_data.requester_name,
+                    subject="Only 12 hours left until your travel begins. Make sure you're all set!",
+                    purpose=ticket.id
+                )
+                notification.save()
+        
+        if time_zone >= travel_datetime - timedelta(hours=1):
+
+            existing_notification = Notification.objects.filter(owner=request_data.requester_name, subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!", purpose=ticket.id).exists()
+            if not existing_notification:
+                notification = Notification(
+                    owner=request_data.requester_name,
+                    subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
+                    purpose=ticket.id
+                )
+                notification.save()
+
     
 
