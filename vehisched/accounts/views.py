@@ -58,30 +58,9 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
 
 
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def get_paginated_response(self, data):
-        return Response({
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'count': self.page.paginator.count,
-            'results': data
-        })
-
-
-class IsAdminOrReadOnly(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and (request.user.role.role_name == 'admin' or request.method in permissions.SAFE_METHODS)
-
-
 class UserListView(generics.ListAPIView):
     serializer_class = FetchedUserSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    pagination_class = CustomPagination
+    
 
     def get_queryset(self):
         allowed_roles = ["requester", "office staff",

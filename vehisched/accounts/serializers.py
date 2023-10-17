@@ -39,9 +39,6 @@ class UserSerializer(serializers.ModelSerializer):
             user.is_active = False
             user.save()
 
-            # if role_name == 'driver':
-            #     driver = Driver_Status.objects.create(user=user, status='Available')
-
             return user
 
 
@@ -53,17 +50,6 @@ class FetchedUserSerializer(serializers.ModelSerializer):
         model = User
         fields = ['id', 'role', 'username', 'email',
                   'first_name', 'middle_name', 'last_name', 'mobile_number', 'is_active']
-# class UserDriverSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = User
-#         fields = ('id', 'username', 'email', 'mobile_number', 'middle_name', 'first_name', 'middle_name', 'last_name',)
-        
-# class DriverSerializer(serializers.ModelSerializer):
-#     user = UserDriverSerializer()  
-
-#     class Meta:
-#         model = Driver_Status
-#         fields = ('user', 'status')
 
 class RoleByNameSerializer(serializers.Serializer):
     role_name = serializers.CharField()
