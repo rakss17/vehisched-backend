@@ -10,6 +10,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import json
 from django.db.models import Q
+from channels.layers import get_channel_layer
 
 
 class RequestListCreateView(generics.ListCreateAPIView):
@@ -22,17 +23,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
         Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
 
-    def send_websocket_notification(self, message):
-        channel_layer = get_channel_layer()
-        event = {
-            'type': 'notify.request_created',
-            'message': message,
-        }
-        async_to_sync(channel_layer.group_send)('notifications', event)
-
     def create(self, request, *args, **kwargs):
         passenger_names = request.data.get('passenger_names', [])
         office_staff_role = Role.objects.get(role_name='office staff')
+        channel_layer = get_channel_layer()
 
         office_staff_users = User.objects.filter(role=office_staff_role)
 
@@ -143,9 +137,16 @@ class RequestListCreateView(generics.ListCreateAPIView):
             subject=f"Request {new_request.request_id} has been created",
         )
         notification.save()
-        message = f"A new request has been created by {self.request.user}"
-        self.send_websocket_notification(message)
 
+        async_to_sync(channel_layer.group_send)(
+        'notifications', 
+        {
+            'type': 'notify.request_canceled',
+            'message': f"A new request has been created by {self.request.user}",
+        }
+    )
+        
+       
         return Response(RequestSerializer(new_request).data, status=201)
 
 
@@ -168,9 +169,10 @@ class RequestListOfficeStaffView(generics.ListAPIView):
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
-
+    
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        channel_layer = get_channel_layer()
 
         is_approving = request.data.get('is_approved', False)
 
@@ -201,7 +203,13 @@ class RequestApprovedView(generics.UpdateAPIView):
             )
             trip_ticket.save()
 
-            
+            async_to_sync(channel_layer.group_send)(
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'approve_notification',
+                'message': f"Request {instance.request_id} has been approved.",
+            }
+        )
 
             notification = Notification(
                 owner=instance.requester_name,  
@@ -219,17 +227,10 @@ class RequestCancelView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
 
-    def send_websocket_notification(self, message):
-        channel_layer = get_channel_layer()
-        event = {
-            'type': 'notify.request_canceled',
-            'message': message,
-        }
-        async_to_sync(channel_layer.group_send)('notifications', event)
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-
+        channel_layer = get_channel_layer()
         office_staff_role = Role.objects.get(role_name='office staff')     
         office_staff_users = User.objects.filter(role=office_staff_role)
 
@@ -265,7 +266,13 @@ class RequestCancelView(generics.UpdateAPIView):
                 subject=f"A request has been canceled by {self.request.user}",
             )
             notification.save()
-        message = f"A request has been canceled by {self.request.user}"
-        self.send_websocket_notification(message)  
+
+        async_to_sync(channel_layer.group_send)(
+        'notifications', 
+        {
+            'type': 'notify.request_canceled',
+            'message': f"A request has been canceled by {self.request.user}",
+        }
+    )
 
         return Response({'message': 'Request canceled successfully.'})

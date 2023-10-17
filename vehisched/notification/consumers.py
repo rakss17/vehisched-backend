@@ -1,7 +1,7 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-class NotificationConsumer(AsyncWebsocketConsumer):
+class NotificationCreatedCanceledConsumer(AsyncWebsocketConsumer):
     async def connect(self):
        
         await self.accept()
@@ -29,10 +29,43 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_created",
-            "message": message,}))
+            "message": message, 'status': 'Created'}))
         
     async def notify_request_canceled(self, event):
     
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_canceled",
             "message": message,}))
+
+
+class NotificationApprovalScheduleReminderConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        
+        await self.accept()
+        requester_name = self.scope.get('query_string').decode('utf-8').split('=')[1]
+        await self.channel_layer.group_add(f"user_{requester_name}", self.channel_name)
+
+    async def disconnect(self, close_code):
+        requester_name = self.scope.get('query_string').decode('utf-8').split('=')[1]
+        await self.channel_layer.group_discard(f"user_{requester_name}", self.channel_name)
+
+    async def receive(self, text_data):
+        data = json.loads(text_data)
+        action = data.get('action')
+
+        if action == 'approve':
+            await self.approve_notification({
+                'message': 'Notification message goes here' 
+            })
+        elif action == "reminder":
+            await self.schedule_reminder({
+                'message': "Notification message goes here"
+            })
+
+    async def approve_notification(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'approve.notification','message': message, 'status': 'Approved'}))
+
+    async def schedule_reminder(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'schedule.reminder', 'message': message}))
