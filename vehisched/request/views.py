@@ -15,9 +15,13 @@ from django.http import JsonResponse
 import requests
 import datetime
 from dateutil.parser import parse
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 def estimate_arrival_time(origin, destination, departure_time):
-    api_key = 'AIzaSyDAR2aPxWHFsplW7mEcUSoRWllqhn67gUY'
+    api_key = os.getenv('GOOGLE_MAP_API_KEY')
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
     params = {
@@ -39,6 +43,7 @@ def estimate_arrival_time(origin, destination, departure_time):
     return arrival_time
 
 def get_place_details(request):
+    api_key = os.getenv('GOOGLE_MAP_API_KEY')
     place_id = request.GET.get('place_id')
     travel_date = request.GET.get('travel_date')
     travel_time = request.GET.get('travel_time')
@@ -52,7 +57,7 @@ def get_place_details(request):
         'https://maps.googleapis.com/maps/api/place/details/json',
         params={
             'place_id': place_id,
-            'key': 'AIzaSyDAR2aPxWHFsplW7mEcUSoRWllqhn67gUY'
+            'key': api_key
         }
     )
     place_data = response.json()
