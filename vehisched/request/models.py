@@ -16,6 +16,23 @@ class Request_Status(models.Model):
     def __str__(self):
         return self.description
 
+class Category(models.Model):
+    description = models.CharField(primary_key=True, max_length=255, choices=[
+        ('Round Trip', 'Round Trip'),
+        ('One-way', 'One-way'),
+    ])
+    
+    def __str__(self):
+        return self.description
+
+class Sub_Category(models.Model):
+    description = models.CharField(max_length=255, null=True, blank=True, choices=[
+        ('Drop', 'Drop'),
+        ('Fetch', 'Fetch'),
+    ])
+
+    def __str__(self):
+        return self.description
 
 class Request (models.Model):
     request_id = models.AutoField(primary_key=True)
@@ -37,6 +54,10 @@ class Request (models.Model):
         Vehicle, on_delete=models.SET_NULL, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     driver_name = models.CharField(max_length=100, null=True, blank=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True)
+    sub_category = models.ForeignKey(
+        Sub_Category, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.office_or_dept

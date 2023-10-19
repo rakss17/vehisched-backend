@@ -67,6 +67,8 @@ class CheckVehicleAvailability(generics.ListAPIView):
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
         preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+        category = self.request.GET.get('category')
+        sub_category = self.request.GET.get('sub_category')
 
 
         unavailable_vehicles = Request.objects.filter(
@@ -92,6 +94,8 @@ class CheckVehicleAvailability(generics.ListAPIView):
         ),
         vehicle__tripticket__vehicle_status__in=['Reserved', 'On trip', 'Unavailable'],
         status__in=['Pending', 'Approved', 'Reschedule'],
+        
+   
     ).exclude(
         (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
         (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))

@@ -11,6 +11,73 @@ from asgiref.sync import async_to_sync
 import json
 from django.db.models import Q
 from channels.layers import get_channel_layer
+from django.http import JsonResponse
+import requests
+import datetime
+from dateutil.parser import parse
+
+def estimate_arrival_time(origin, destination, departure_time):
+    api_key = 'AIzaSyDAR2aPxWHFsplW7mEcUSoRWllqhn67gUY'
+    distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
+
+    params = {
+        'origins': origin,
+        'destinations': destination,
+        'departure_time': departure_time,
+        'key': api_key,
+    }
+
+    response = requests.get(distance_matrix_api_url, params=params)
+    data = response.json()
+
+    # Extract duration from the response
+    duration = data['rows'][0]['elements'][0]['duration_in_traffic']['value']
+
+    # Calculate arrival time
+    arrival_time = departure_time + datetime.timedelta(seconds=duration)
+
+    return arrival_time
+
+def get_place_details(request):
+    place_id = request.GET.get('place_id')
+    travel_date = request.GET.get('travel_date')
+    travel_time = request.GET.get('travel_time')
+
+    print("travel date: ", travel_date)
+    print("travel time: ", travel_time)
+    if not place_id:
+        return JsonResponse({'error': 'Missing place_id parameter'}, status=400)
+
+    response = requests.get(
+        'https://maps.googleapis.com/maps/api/place/details/json',
+        params={
+            'place_id': place_id,
+            'key': 'AIzaSyDAR2aPxWHFsplW7mEcUSoRWllqhn67gUY'
+        }
+    )
+    place_data = response.json()
+    ustp_coordinates = '8.484769199999999,124.6567168'
+
+    # Coordinates of the destination (obtained from get_place_details)
+    destination_coordinates = f"{place_data['result']['geometry']['location']['lat']},{place_data['result']['geometry']['location']['lng']}"
+
+    # Departure time from USTP (as a datetime object)
+    departure_time = parse(f"{travel_date}T{travel_time}")
+
+    # Estimate arrival time at the destination
+    arrival_time = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
+
+    # Estimate return time to USTP
+    return_time = estimate_arrival_time(destination_coordinates, ustp_coordinates, arrival_time)
+
+    # Add the estimated times to the response data
+    place_data['estimated_arrival_time'] = arrival_time.isoformat()
+    place_data['estimated_return_time'] = return_time.isoformat()
+
+    return JsonResponse(place_data)
+    
+    
+
 
 
 class RequestListCreateView(generics.ListCreateAPIView):
@@ -50,6 +117,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
         travel_time = request.data['travel_time']
         return_date = request.data['return_date']
         return_time = request.data['return_time']
+        category = request.data['category']
+        sub_category = request.data['sub_category']
 
         if Request.objects.filter(
             (
@@ -129,7 +198,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
             purpose=request.data['purpose'],
             is_approved=False,
             status=Request_Status.objects.get(description='Pending'),
-            vehicle=vehicle
+            vehicle=vehicle,
+            category = category,
+            sub_category=sub_category
+            
         )
 
         notification = Notification(

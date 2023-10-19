@@ -10,4 +10,5 @@ urlpatterns = [
          name='request-approved'),
     path('cancel/<int:pk>/', views.RequestCancelView.as_view(),
          name='request-cancelled'),
+     path('place-details/', views.get_place_details, name='place-details'),
 ]
