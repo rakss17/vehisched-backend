@@ -26,8 +26,6 @@ def estimate_arrival_time(origin, destination, departure_time):
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
     datetime_str = departure_time.strftime("%Y-%m-%d %H:%M")
-
-    print("pre", datetime_str)
     
     departure_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
     departure_timestamp = int(departure_datetime.timestamp())
@@ -42,23 +40,19 @@ def estimate_arrival_time(origin, destination, departure_time):
     response = requests.get(distance_matrix_api_url, params=params)
     data = response.json()
 
-    print("Distance Matrix API Response:", data)
-
-    # Check if the required data exists
+    
     if 'rows' in data and data['rows'] and 'elements' in data['rows'][0] and data['rows'][0]['elements']:
-        # Extract duration from the response
+        
         duration = data['rows'][0]['elements'][0]['duration_in_traffic']['value']
+        distance = data['rows'][0]['elements'][0]['distance']['text']
 
-        # Calculate arrival time
         departure_datetime = datetime.fromtimestamp(departure_timestamp)
 
-        # Calculate arrival time
         arrival_time = departure_datetime + timedate.timedelta(seconds=duration)
 
-        return arrival_time
+        return arrival_time, distance
 
-
-    
+    return None, None
 
 
 def get_place_details(request):
@@ -80,41 +74,27 @@ def get_place_details(request):
     place_data = response.json()
     ustp_coordinates = '8.484769199999999,124.6567168'
 
-    print(travel_date)
-    print(travel_time)
-
-    # Coordinates of the destination (obtained from get_place_details)
     destination_coordinates = f"{place_data['result']['geometry']['location']['lat']},{place_data['result']['geometry']['location']['lng']}"
 
-    print(destination_coordinates)
-    # Departure time from USTP (as a datetime object)
+
     departure_time = parse(f"{travel_date}T{travel_time}")
 
-    # Rest of the code...
-
-# Estimate arrival time at the destination
-    arrival_time = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
-
-    print("wewew", arrival_time)
+    
+    arrival_time, distance = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
 
     if arrival_time is not None:
-        # Estimate return time to USTP
-        return_time = estimate_arrival_time(destination_coordinates, ustp_coordinates, arrival_time)
+        return_time, _ = estimate_arrival_time(destination_coordinates, ustp_coordinates, arrival_time)
 
-        # Add the estimated times to the response data
+      
         place_data['estimated_arrival_time'] = arrival_time.isoformat()
         place_data['estimated_return_time'] = return_time.isoformat() if return_time is not None else None
+        place_data['distance'] = distance
     else:
-        # Handle the case when arrival_time is None
         place_data['estimated_arrival_time'] = None
         place_data['estimated_return_time'] = None
+        place_data['distance'] = None
 
     return JsonResponse(place_data)
-
-    
-    
-
-
 
 class RequestListCreateView(generics.ListCreateAPIView):
     serializer_class = RequestSerializer
