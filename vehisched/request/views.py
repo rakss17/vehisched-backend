@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Request_Status
+from .models import Request, Request_Status, Category, Sub_Category
 from tripticket.models import TripTicket, TripTicket_Status
 from accounts.models import Role, User, Driver_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
@@ -204,8 +204,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
             is_approved=False,
             status=Request_Status.objects.get(description='Pending'),
             vehicle=vehicle,
-            category = category,
-            sub_category=sub_category
+            category = Category.objects.get(description=category),
+            sub_category=Sub_Category.objects.get(description=sub_category)
             
         )
 

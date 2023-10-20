@@ -26,9 +26,10 @@ class Category(models.Model):
         return self.description
 
 class Sub_Category(models.Model):
-    description = models.CharField(max_length=255, null=True, blank=True, choices=[
+    description = models.CharField(primary_key=True, max_length=255, choices=[
         ('Drop', 'Drop'),
         ('Fetch', 'Fetch'),
+        ('N/A', 'N/A')
     ])
 
     def __str__(self):
