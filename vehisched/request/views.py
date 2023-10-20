@@ -13,7 +13,8 @@ from django.db.models import Q
 from channels.layers import get_channel_layer
 from django.http import JsonResponse
 import requests
-import datetime
+import datetime as timedate
+from datetime import datetime
 from dateutil.parser import parse
 from dotenv import load_dotenv
 import os
@@ -24,23 +25,41 @@ def estimate_arrival_time(origin, destination, departure_time):
     api_key = os.getenv('GOOGLE_MAP_API_KEY')
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
+    datetime_str = departure_time.strftime("%Y-%m-%d %H:%M")
+
+    print("pre", datetime_str)
+    
+    departure_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
+    departure_timestamp = int(departure_datetime.timestamp())
+
     params = {
         'origins': origin,
         'destinations': destination,
-        'departure_time': departure_time,
+        'departure_time': departure_timestamp,
         'key': api_key,
     }
 
     response = requests.get(distance_matrix_api_url, params=params)
     data = response.json()
 
-    # Extract duration from the response
-    duration = data['rows'][0]['elements'][0]['duration_in_traffic']['value']
+    print("Distance Matrix API Response:", data)
 
-    # Calculate arrival time
-    arrival_time = departure_time + datetime.timedelta(seconds=duration)
+    # Check if the required data exists
+    if 'rows' in data and data['rows'] and 'elements' in data['rows'][0] and data['rows'][0]['elements']:
+        # Extract duration from the response
+        duration = data['rows'][0]['elements'][0]['duration_in_traffic']['value']
 
-    return arrival_time
+        # Calculate arrival time
+        departure_datetime = datetime.fromtimestamp(departure_timestamp)
+
+        # Calculate arrival time
+        arrival_time = departure_datetime + timedate.timedelta(seconds=duration)
+
+        return arrival_time
+
+
+    
+
 
 def get_place_details(request):
     api_key = os.getenv('GOOGLE_MAP_API_KEY')
@@ -48,8 +67,6 @@ def get_place_details(request):
     travel_date = request.GET.get('travel_date')
     travel_time = request.GET.get('travel_time')
 
-    print("travel date: ", travel_date)
-    print("travel time: ", travel_time)
     if not place_id:
         return JsonResponse({'error': 'Missing place_id parameter'}, status=400)
 
@@ -63,23 +80,37 @@ def get_place_details(request):
     place_data = response.json()
     ustp_coordinates = '8.484769199999999,124.6567168'
 
+    print(travel_date)
+    print(travel_time)
+
     # Coordinates of the destination (obtained from get_place_details)
     destination_coordinates = f"{place_data['result']['geometry']['location']['lat']},{place_data['result']['geometry']['location']['lng']}"
 
+    print(destination_coordinates)
     # Departure time from USTP (as a datetime object)
     departure_time = parse(f"{travel_date}T{travel_time}")
 
-    # Estimate arrival time at the destination
+    # Rest of the code...
+
+# Estimate arrival time at the destination
     arrival_time = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
 
-    # Estimate return time to USTP
-    return_time = estimate_arrival_time(destination_coordinates, ustp_coordinates, arrival_time)
+    print("wewew", arrival_time)
 
-    # Add the estimated times to the response data
-    place_data['estimated_arrival_time'] = arrival_time.isoformat()
-    place_data['estimated_return_time'] = return_time.isoformat()
+    if arrival_time is not None:
+        # Estimate return time to USTP
+        return_time = estimate_arrival_time(destination_coordinates, ustp_coordinates, arrival_time)
+
+        # Add the estimated times to the response data
+        place_data['estimated_arrival_time'] = arrival_time.isoformat()
+        place_data['estimated_return_time'] = return_time.isoformat() if return_time is not None else None
+    else:
+        # Handle the case when arrival_time is None
+        place_data['estimated_arrival_time'] = None
+        place_data['estimated_return_time'] = None
 
     return JsonResponse(place_data)
+
     
     
 
