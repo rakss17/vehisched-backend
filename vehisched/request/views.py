@@ -216,8 +216,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
             status=Request_Status.objects.get(description='Pending'),
             vehicle=vehicle,
             category = Category.objects.get(description=category),
-            sub_category=Sub_Category.objects.get(description=sub_category)
-            
+            sub_category=Sub_Category.objects.get(description=sub_category),
+            distance = request.data['distance']
         )
 
         notification = Notification(

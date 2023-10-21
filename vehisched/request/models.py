@@ -44,6 +44,7 @@ class Request (models.Model):
     return_date = models.DateField(null=True, blank=True)
     return_time = models.TimeField(null=True, blank=True)
     destination = models.CharField(max_length=255, null=True, blank=True)
+    distance = models.IntegerField(null=True, blank=True)
     office_or_dept = models.CharField(max_length=255, null=True, blank=True)
     number_of_passenger = models.IntegerField(null=True, blank=True)
     passenger_names = models.TextField(null=True, blank=True, help_text="List of passenger names in JSON format")
