@@ -13,9 +13,24 @@ class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
         trip_tickets = TripTicket.objects.filter(request_number__requester_name=request.user, status__description="Scheduled")
+        next_sched_trip_tickets = TripTicket.objects.filter(status__description="Scheduled")
 
         if not trip_tickets:
             raise PermissionDenied
+
+        current_schedule = trip_tickets.first()  # Get the current schedule
+
+        # Get tickets for the same vehicle and with a travel date greater than the current schedule
+        next_schedules = next_sched_trip_tickets.filter(
+            request_number__vehicle=current_schedule.request_number.vehicle,
+            request_number__travel_date__gt=current_schedule.request_number.travel_date
+        )
+        next_schedule = None
+        # If next_schedules queryset is not empty, the first ticket is the next schedule
+        if next_schedules:
+            next_schedule = next_schedules.first()
+
+        # Rest of your code
 
         for ticket in trip_tickets:
             request_data = Request.objects.get(request_id=ticket.request_number.request_id)
@@ -33,7 +48,20 @@ class ScheduleRequesterView(generics.ListAPIView):
                 'status': ticket.status.description,
             })
 
+
+
+        if next_schedule:
+            trip_data.append({
+                'next_schedule_travel_date': next_schedule.request_number.travel_date,
+                'next_schedule_travel_time': next_schedule.request_number.travel_time,
+                'next_schedule_vehicle': next_schedule.request_number.vehicle.plate_number,
+            })
+
         return JsonResponse(trip_data, safe=False)
+
+
+
+
     
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
