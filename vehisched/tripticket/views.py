@@ -9,34 +9,35 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 
+from django.shortcuts import get_object_or_404
+from datetime import datetime
+
 class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
         trip_tickets = TripTicket.objects.filter(request_number__requester_name=request.user, status__description="Scheduled")
-        next_sched_trip_tickets = TripTicket.objects.filter(status__description="Scheduled")
 
         if not trip_tickets:
             raise PermissionDenied
 
-        current_schedule = trip_tickets.first() 
+        for current_schedule in trip_tickets:
+            next_sched_trip_tickets = TripTicket.objects.filter(status__description="Scheduled")
 
-        next_schedules = next_sched_trip_tickets.filter(
-            request_number__vehicle=current_schedule.request_number.vehicle,
-            request_number__travel_date__gt=current_schedule.request_number.travel_date,
-        )
-        next_schedule = None
-        
-        if next_schedules:
-            next_schedule = next_schedules.first()
+            next_schedules = next_sched_trip_tickets.filter(
+                request_number__vehicle=current_schedule.request_number.vehicle,
+                request_number__travel_date__gt=current_schedule.request_number.travel_date,
+            )
+            next_schedule = None
 
-        
-        previous_tripticket_id = None
+            if next_schedules:
+                next_schedule = next_schedules.first()
 
-        for ticket in trip_tickets.order_by('request_number__travel_date'):
-            request_data = get_object_or_404(Request, request_id=ticket.request_number.request_id)
-            driver_data = get_object_or_404(User, username=ticket.driver_name)
+            previous_tripticket_id = None
+
+            request_data = get_object_or_404(Request, request_id=current_schedule.request_number.request_id)
+            driver_data = get_object_or_404(User, username=current_schedule.driver_name)
             trip_data.append({
-                'tripticket_id': ticket.id,
+                'tripticket_id': current_schedule.id,
                 'travel_date': request_data.travel_date,
                 'travel_time': request_data.travel_time,
                 'return_date': request_data.return_date,
@@ -45,29 +46,29 @@ class ScheduleRequesterView(generics.ListAPIView):
                 'contact_no_of_driver': driver_data.mobile_number,
                 'destination': request_data.destination,
                 'vehicle': request_data.vehicle.plate_number,
-                'status': ticket.status.description,
+                'status': current_schedule.status.description,
             })
 
-            
-            previous_ticket = TripTicket.objects.filter(
-                plate_number=request_data.vehicle.plate_number,
-                status__description="Scheduled",
-                request_number__travel_date__lt=next_schedule.request_number.travel_date
-            ).order_by('-request_number__travel_date').first()
+            if next_schedule:
+                previous_ticket = TripTicket.objects.filter(
+                    plate_number=request_data.vehicle.plate_number,
+                    status__description="Scheduled",
+                    request_number__travel_date__lt=next_schedule.request_number.travel_date
+                ).order_by('-request_number__travel_date').first()
 
-            
-            if previous_ticket:
-                previous_tripticket_id = previous_ticket.id
+                if previous_ticket:
+                    previous_tripticket_id = previous_ticket.id
 
-        if next_schedule:
-            trip_data.append({
-                'previous_tripticket_id': previous_tripticket_id,
-                'next_schedule_travel_date': next_schedule.request_number.travel_date,
-                'next_schedule_travel_time': next_schedule.request_number.travel_time,
-                'next_schedule_vehicle': next_schedule.request_number.vehicle.plate_number,
-            })
+                trip_data.append({
+                    'previous_tripticket_id': previous_tripticket_id,
+                    'next_schedule_travel_date': next_schedule.request_number.travel_date,
+                    'next_schedule_travel_time': next_schedule.request_number.travel_time,
+                    'next_schedule_vehicle': next_schedule.request_number.vehicle.plate_number,
+                })
 
         return JsonResponse(trip_data, safe=False)
+
+
     
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
