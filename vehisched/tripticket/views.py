@@ -18,23 +18,23 @@ class ScheduleRequesterView(generics.ListAPIView):
         if not trip_tickets:
             raise PermissionDenied
 
-        current_schedule = trip_tickets.first()  # Get the current schedule
+        current_schedule = trip_tickets.first() 
 
-        # Get tickets for the same vehicle and with a travel date greater than the current schedule
         next_schedules = next_sched_trip_tickets.filter(
             request_number__vehicle=current_schedule.request_number.vehicle,
-            request_number__travel_date__gt=current_schedule.request_number.travel_date
+            request_number__travel_date__gt=current_schedule.request_number.travel_date,
         )
         next_schedule = None
-        # If next_schedules queryset is not empty, the first ticket is the next schedule
+        
         if next_schedules:
             next_schedule = next_schedules.first()
 
-        # Rest of your code
+        
+        previous_tripticket_id = None
 
-        for ticket in trip_tickets:
-            request_data = Request.objects.get(request_id=ticket.request_number.request_id)
-            driver_data = User.objects.get(username=ticket.driver_name)
+        for ticket in trip_tickets.order_by('request_number__travel_date'):
+            request_data = get_object_or_404(Request, request_id=ticket.request_number.request_id)
+            driver_data = get_object_or_404(User, username=ticket.driver_name)
             trip_data.append({
                 'tripticket_id': ticket.id,
                 'travel_date': request_data.travel_date,
@@ -48,20 +48,26 @@ class ScheduleRequesterView(generics.ListAPIView):
                 'status': ticket.status.description,
             })
 
+            
+            previous_ticket = TripTicket.objects.filter(
+                plate_number=request_data.vehicle.plate_number,
+                status__description="Scheduled",
+                request_number__travel_date__lt=next_schedule.request_number.travel_date
+            ).order_by('-request_number__travel_date').first()
 
+            
+            if previous_ticket:
+                previous_tripticket_id = previous_ticket.id
 
         if next_schedule:
             trip_data.append({
+                'previous_tripticket_id': previous_tripticket_id,
                 'next_schedule_travel_date': next_schedule.request_number.travel_date,
                 'next_schedule_travel_time': next_schedule.request_number.travel_time,
                 'next_schedule_vehicle': next_schedule.request_number.vehicle.plate_number,
             })
 
         return JsonResponse(trip_data, safe=False)
-
-
-
-
     
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
@@ -233,17 +239,3 @@ class DriverSchedulesView(generics.ListAPIView):
             })
 
         return JsonResponse(trip_data, safe=False)
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
