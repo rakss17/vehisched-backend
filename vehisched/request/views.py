@@ -139,14 +139,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
         if Request.objects.filter(
             (
                 Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) &
-                ~Q(travel_time__range=[travel_time, return_time]) &
-                ~Q(return_time__range=[travel_time, return_time])
+                Q(return_date__range=[travel_date, return_date]) 
             ) | (
                 Q(travel_date__range=[travel_date, return_date]) |
-                Q(return_date__range=[travel_date, return_date]) |
-                ~Q(travel_time__range=[travel_time, return_time]) |
-                ~Q(return_time__range=[travel_time, return_time])
+                Q(return_date__range=[travel_date, return_date])
             ) | (
                 Q(travel_date__range=[travel_date, return_date]) &
                 Q(travel_time__range=[travel_time, return_time])
