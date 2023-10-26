@@ -13,7 +13,7 @@ class Command(BaseCommand):
         PeriodicTask.objects.create(
             interval=schedule,
             name='Check travel dates every minute',
-            task='tripticket.tasks.check_travel_dates',
+            task='trip.tasks.check_travel_dates',
         )
 
         self.stdout.write(self.style.SUCCESS('Successfully created periodic task'))

@@ -1,10 +1,10 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Request_Status, Category, Sub_Category
-from tripticket.models import TripTicket, TripTicket_Status
+from .models import Request, Type, Vehicle_Driver_Status
+from trip.models import Trip
 from accounts.models import Role, User, Driver_Status
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
-from vehicle.models import Vehicle, Vehicle_Status
+from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -107,16 +107,16 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        passenger_names = request.data.get('passenger_names', [])
+        passenger_name = request.data.get('passenger_name', [])
         office_staff_role = Role.objects.get(role_name='office staff')
         channel_layer = get_channel_layer()
 
         office_staff_users = User.objects.filter(role=office_staff_role)
 
         try:
-            passenger_names = json.loads(passenger_names)
+            passenger_name = json.loads(passenger_name)
         except json.JSONDecodeError:
-            return Response({'passenger_names': ['Invalid JSON data.']}, status=400)
+            return Response({'passenger_name': ['Invalid JSON data.']}, status=400)
 
         for user in office_staff_users:
             notification = Notification(
@@ -133,8 +133,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
         travel_time = request.data['travel_time']
         return_date = request.data['return_date']
         return_time = request.data['return_time']
-        category = request.data['category']
-        sub_category = request.data['sub_category']
+        type = request.data['type']
+        
 
         if Request.objects.filter(
             (
@@ -156,8 +156,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 Q(return_time__lte=return_time)
             ),
             vehicle=vehicle,
-            vehicle__tripticket__vehicle_status__in=['Reserved', 'On trip', 'Unavailable'],
-            status__in=['Approved', 'Reschedule']
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+            status__in=['Approved', 'Reschedule'],
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
@@ -190,6 +190,12 @@ class RequestListCreateView(generics.ListCreateAPIView):
         ).exists():
             error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
             return Response({'error': error_message, "type": "Pending"}, status=400)
+        
+        vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+            driver_id=None,
+            plate_number=vehicle,
+            status='Reserved - Assigned'
+        )
 
         new_request = Request.objects.create(
             requester_name=self.request.user,
@@ -198,17 +204,18 @@ class RequestListCreateView(generics.ListCreateAPIView):
             return_date=return_date,
             return_time=return_time,
             destination=request.data['destination'],
-            office_or_dept=request.data['office_or_dept'],
+            office=request.data['office'],
             number_of_passenger=request.data['number_of_passenger'],
-            passenger_names=passenger_names,
+            passenger_name=passenger_name,
             purpose=request.data['purpose'],
-            is_approved=False,
-            status=Request_Status.objects.get(description='Pending'),
-            vehicle=vehicle,
-            category = Category.objects.get(description=category),
-            sub_category=Sub_Category.objects.get(description=sub_category),
-            distance = request.data['distance']
+            status= 'Pending',
+            vehicle= vehicle,
+            type = Type.objects.get(name=type),
+            distance = request.data['distance'],
         )
+
+        new_request.vehicle_driver_status_id = vehicle_driver_status
+        new_request.save()
 
         notification = Notification(
             owner=self.request.user,
@@ -228,8 +235,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return Response(RequestSerializer(new_request).data, status=201)
 
 
-
-
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
     queryset = Request.objects.all()
@@ -242,7 +247,7 @@ class RequestListOfficeStaffView(generics.ListAPIView):
             Notification.objects.filter(owner=user).update(read_status=True)
 
         return super().list(request, *args, **kwargs)
- 
+
  
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
@@ -252,48 +257,47 @@ class RequestApprovedView(generics.UpdateAPIView):
         instance = self.get_object()
         channel_layer = get_channel_layer()
 
-        is_approving = request.data.get('is_approved', False)
+        driver_id = request.data.get('driver_id')  
+        driver = User.objects.get(id=driver_id) 
+        driver_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
 
-        if is_approving:
+        approved_status = 'Approved'
+        instance.status = approved_status
+        instance.driver_name = driver
+        instance.save()
 
-            driver_id = request.data.get('driver_id')  
-            driver = User.objects.get(id=driver_id) 
-            driver_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
+        # requester_name = instance.requester_name
+        # requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
 
-            approved_status = Request_Status.objects.get(description='Approved')
-            instance.status = approved_status
-            instance.driver_name = driver_name 
-            instance.save()
+        # vehicle_driver_status = Vehicle_Driver_Status.objects.get(description='Assigned')
 
-            requester_name = instance.requester_name
-            requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
 
-            driver_status = Driver_Status.objects.get(description='Assigned')
-
-            plate_number = instance.vehicle
-            authorized_passenger = f"{requester_full_name}, {instance.passenger_names}"
-            trip_ticket = TripTicket(
-                driver_name=driver,
-                plate_number=plate_number,
-                authorized_passenger=authorized_passenger,
-                request_number=instance,
-                driver_status = driver_status
-            )
-            trip_ticket.save()
-
-            async_to_sync(channel_layer.group_send)(
-            f"user_{instance.requester_name}", 
-            {
-                'type': 'approve_notification',
-                'message': f"Request {instance.request_id} has been approved.",
-            }
+        existing_vehicle_driver_status.driver_id = driver
+        existing_vehicle_driver_status.save()
+        # plate_number = instance.vehicle
+        # authorized_passenger = f"{requester_full_name}, {instance.passenger_name}"
+        trip = Trip(
+            # driver_name=driver,
+            # plate_number=plate_number,
+            # authorized_passenger=authorized_passenger,
+            request_id=instance,
         )
+        trip.save()
 
-            notification = Notification(
-                owner=instance.requester_name,  
-                subject=f"Request {instance.request_id} has been approved",  
-            )
-            notification.save()
+        async_to_sync(channel_layer.group_send)(
+        f"user_{instance.requester_name}", 
+        {
+            'type': 'approve_notification',
+            'message': f"Request {instance.request_id} has been approved.",
+        }
+    )
+
+        notification = Notification(
+            owner=instance.requester_name,  
+            subject=f"Request {instance.request_id} has been approved",  
+        )
+        notification.save()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -312,30 +316,16 @@ class RequestCancelView(generics.UpdateAPIView):
         office_staff_role = Role.objects.get(role_name='office staff')     
         office_staff_users = User.objects.filter(role=office_staff_role)
 
-        if instance.status.description == 'Canceled':
+        if instance.status == 'Canceled':
             return Response({'message': 'Request is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        instance.status = Request_Status.objects.get(description='Canceled')
+        instance.status = 'Canceled'
         instance.save()
 
-        request_status = request.data.get('selected_status')
-        
-        if request_status == 'Approved':
-            trip_ticket = TripTicket.objects.get(request_number=instance)
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
 
-            trip_ticket_status_canceled = TripTicket_Status.objects.get(description='Canceled')
-            trip_ticket.status = trip_ticket_status_canceled
-            trip_ticket.save()
-
-
-            driver_status = Driver_Status.objects.get(description='Available')
-            trip_ticket.driver_status = driver_status
-
-            vehicle_status_available = Vehicle_Status.objects.get(description='Available')
-            trip_ticket.vehicle_status = vehicle_status_available
-            trip_ticket.save()
-
-        
+        existing_vehicle_driver_status.status = 'Available'
+        existing_vehicle_driver_status.save()
 
         for user in office_staff_users:
         

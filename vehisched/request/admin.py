@@ -1,7 +1,6 @@
 from django.contrib import admin
-from .models import Request, Request_Status, Category, Sub_Category
+from .models import Request, Type, Vehicle_Driver_Status
 
 admin.site.register(Request)
-admin.site.register(Request_Status)
-admin.site.register(Category)
-admin.site.register(Sub_Category)
+admin.site.register(Type)
+admin.site.register(Vehicle_Driver_Status)

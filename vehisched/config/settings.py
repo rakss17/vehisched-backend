@@ -57,7 +57,7 @@ INSTALLED_APPS = [
     'accounts',
     'request',
     'vehicle',
-    'tripticket',
+    'trip',
     'notification',
 ]
 

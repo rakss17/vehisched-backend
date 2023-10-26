@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from celery import shared_task
 from notification.models import Notification
-from .models import TripTicket
+from .models import Trip
 from request.models import Request
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
@@ -11,10 +11,10 @@ from asgiref.sync import async_to_sync
 def check_travel_dates():
     channel_layer = get_channel_layer()
     
-    trip_tickets = TripTicket.objects.filter(status__description="Scheduled")
+    trips = Trip.objects.filter(request_id__status_="Approved")
     
-    for ticket in trip_tickets:
-        request_data = Request.objects.get(request_id=ticket.request_number.request_id)
+    for trip in trips:
+        request_data = Request.objects.get(request_id=trip.request_id.request_id)
         travel_datetime = datetime.combine(request_data.travel_date, request_data.travel_time)
         travel_datetime = timezone.make_aware(travel_datetime)
         
@@ -24,7 +24,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="This is to remind you that you have a scheduled travel in 24 hours", 
-                purpose=ticket.id
+                purpose=trip.id
             ).exists()
             
             if not existing_notification:
@@ -39,7 +39,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="This is to remind you that you have a scheduled travel in 24 hours",
-                    purpose=ticket.id
+                    purpose=trip.id
                 )
                 notification.save()
                             
@@ -47,7 +47,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="Only 12 hours left until your travel begins. Make sure you're all set!", 
-                purpose=ticket.id).exists()
+                purpose=trip.id).exists()
             
             if not existing_notification:
                 async_to_sync(channel_layer.group_send)(
@@ -60,7 +60,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Only 12 hours left until your travel begins. Make sure you're all set!",
-                    purpose=ticket.id
+                    purpose=trip.id
                 )
                 notification.save()
         
@@ -68,7 +68,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!", 
-                purpose=ticket.id).exists()
+                purpose=trip.id).exists()
             if not existing_notification:
                 async_to_sync(channel_layer.group_send)(
             f"user_{request_data.requester_name}", 
@@ -80,6 +80,6 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
-                    purpose=ticket.id
+                    purpose=trip.id
                 )
                 notification.save()
