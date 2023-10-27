@@ -67,8 +67,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'next_schedule_travel_time': next_schedule.request_id.travel_time,
                     'next_schedule_vehicle': next_schedule.request_id.vehicle.plate_number,
                 })
-            print(trip_data)
-
+            
         return JsonResponse(trip_data, safe=False)
 
 
@@ -218,7 +217,7 @@ class DriverSchedulesView(generics.ListAPIView):
         for trip in trips:
             request_data = get_object_or_404(Request, request_id=trip.request_id.request_id)
             driver_data = get_object_or_404(User, username=trip.request_id.driver_name)
-            print("hehe", driver_data)
+            
             trip_data.append({
                 'trip_id': trip.id,
                 'request_id': request_data.request_id,

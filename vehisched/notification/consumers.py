@@ -13,7 +13,6 @@ class NotificationCreatedCanceledConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         data = json.loads(text_data)
         action = data.get('action')
-        print(action)
 
         if action == 'created':
             await self.notify_request_created({
