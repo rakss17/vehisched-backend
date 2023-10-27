@@ -18,11 +18,6 @@ class ScheduleRequesterView(generics.ListAPIView):
         trip_data = []
         trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Approved")
 
-        print("User:", request.user)
-        print("Is authenticated:", request.user.is_authenticated)
-        print("Number of trips:", len(trips))
-
-
         if not trips:
             raise PermissionDenied
 
@@ -52,7 +47,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                 'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}",
                 'contact_no_of_driver': driver_data.mobile_number,
                 'destination': request_data.destination,
-                'vehicle': request_data.vehicle.plate_number,
+                'vehicle': f"{request_data.vehicle.plate_number} {request_data.vehicle.model}",
                 'status': current_schedule.request_id.status,
             })
 

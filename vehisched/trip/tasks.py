@@ -11,7 +11,7 @@ from asgiref.sync import async_to_sync
 def check_travel_dates():
     channel_layer = get_channel_layer()
     
-    trips = Trip.objects.filter(request_id__status_="Approved")
+    trips = Trip.objects.filter(request_id__status="Approved")
     
     for trip in trips:
         request_data = Request.objects.get(request_id=trip.request_id.request_id)
