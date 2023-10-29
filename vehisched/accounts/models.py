@@ -29,12 +29,19 @@ class Driver_Status(models.Model):
     def __str__(self):
         return self.description
 
+class Office(models.Model):
+    office_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 class User(AbstractUser):
     role = models.ForeignKey(
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)
+    office_id = models.OneToOneField(Office, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.username
