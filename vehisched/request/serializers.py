@@ -3,32 +3,63 @@ from .models import Request
 
 
 class RequestSerializer(serializers.ModelSerializer):
+    driver_full_name = serializers.SerializerMethodField()
+    driver_mobile_number = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
+
+    def get_driver_full_name(self, obj):
+        if obj.driver_name:
+            driver = obj.driver_name
+            driver_full_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
+            return driver_full_name
+        return None
+    def get_driver_mobile_number(self, obj):
+        if obj.driver_name:
+            driver = obj.driver_name
+            driver_mobile_number = driver.mobile_number
+            return driver_mobile_number
+        return None
+    
+    def get_type(self, obj):
+        if obj.type:
+            type = obj.type
+            type = type.name
+            return type
+        return None
     class Meta:
         model = Request
-        fields = '__all__'
+        fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
+                  'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
+                  'driver_mobile_number','distance']
 
 class RequestOfficeStaffSerializer(serializers.ModelSerializer):
-    requester_last_name = serializers.SerializerMethodField()
-    requester_first_name = serializers.SerializerMethodField()
-    requester_middle_name = serializers.SerializerMethodField()
+    requester_full_name = serializers.SerializerMethodField()
+    driver_full_name = serializers.SerializerMethodField()
+    type = serializers.SerializerMethodField()
 
-    def get_requester_last_name(self, obj):
-        if obj.requester_name:
-            return obj.requester_name.last_name
+    def get_driver_full_name(self, obj):
+        if obj.driver_name:
+            driver = obj.driver_name
+            driver_full_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
+            return driver_full_name
         return None
 
-    def get_requester_first_name(self, obj):
+    def get_requester_full_name(self, obj):
         if obj.requester_name:
-            return obj.requester_name.first_name
+            requester = obj.requester_name
+            requester_full_name = f"{requester.last_name}, {requester.first_name} {requester.middle_name}"
+            return requester_full_name
         return None
-
-    def get_requester_middle_name(self, obj):
-        if obj.requester_name:
-            return obj.requester_name.middle_name
+    
+    def get_type(self, obj):
+        if obj.type:
+            type = obj.type
+            type = type.name
+            return type
         return None
 
     class Meta:
         model = Request
-        fields = ['request_id', 'requester_last_name', 'requester_first_name', 'requester_middle_name', 
-                  'travel_date', 'travel_time', 'destination', 'office_or_dept', 'number_of_passenger', 
-                  'passenger_names', 'purpose', 'is_approved', 'status', 'vehicle', 'created_at', 'driver_name']
+        fields = ['request_id', 'requester_full_name', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
+                  'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
+                  'type', 'distance']

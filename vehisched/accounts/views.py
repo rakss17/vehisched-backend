@@ -8,8 +8,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions, status
-from .models import User, Role, Driver_Status
-from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer, DriverSerializer
+from .models import User, Role
+from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -58,30 +58,9 @@ class UserProfileView(generics.RetrieveAPIView):
         return self.request.user
 
 
-class CustomPagination(PageNumberPagination):
-    page_size = 10
-
-    page_size_query_param = 'page_size'
-    max_page_size = 100
-
-    def get_paginated_response(self, data):
-        return Response({
-            'next': self.get_next_link(),
-            'previous': self.get_previous_link(),
-            'count': self.page.paginator.count,
-            'results': data
-        })
-
-
-class IsAdminOrReadOnly(permissions.BasePermission):
-    def has_permission(self, request, view):
-        return request.user and (request.user.role.role_name == 'admin' or request.method in permissions.SAFE_METHODS)
-
-
 class UserListView(generics.ListAPIView):
     serializer_class = FetchedUserSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    pagination_class = CustomPagination
+    
 
     def get_queryset(self):
         allowed_roles = ["requester", "office staff",
@@ -155,8 +134,13 @@ class UserDeleteView(generics.DestroyAPIView):
             return Response(status=status.HTTP_404_NOT_FOUND)
 
 class DriverListView(generics.ListAPIView):
-    queryset = Driver_Status.objects.all()
-    serializer_class = DriverSerializer
+    serializer_class = FetchedUserSerializer
+
+    def get_queryset(self):
+        driver_role = Role.objects.get(role_name='driver')
+        queryset = User.objects.filter(role=driver_role)
+        return queryset
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])

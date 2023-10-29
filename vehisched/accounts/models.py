@@ -16,25 +16,39 @@ class Role(models.Model):
 
     def __str__(self):
         return self.role_name
+    
 
+class Driver_Status(models.Model):
+    description = models.CharField(primary_key=True,max_length=255, choices=[
+        ('Available', 'Available'),
+        ('On trip', 'On Trip'),
+        ('Unavailable', 'Unavailable'),
+        ('Assigned', 'Assigned')
+    ])
+
+    def __str__(self):
+        return self.description
+
+class Office(models.Model):
+    office_id = models.AutoField(primary_key=True)
+    name = models.CharField(max_length=255, null=True, blank=True)
+
+    def __str__(self):
+        return self.name
 
 class User(AbstractUser):
     role = models.ForeignKey(
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)
+    office_id = models.OneToOneField(Office, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.username
 
 
-class Driver_Status(models.Model):
-    user = models.OneToOneField(
-        'User', on_delete=models.CASCADE, primary_key=True)
-    status = models.CharField(max_length=255, choices=[
-        ('Available', 'Available'),
-        ('On trip', 'On Trip'),
-        ('Unavailable', 'Unavailable')
-    ], default='Available')
+
+
+
 
 
