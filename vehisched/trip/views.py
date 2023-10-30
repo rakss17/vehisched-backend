@@ -16,16 +16,14 @@ from request.serializers import RequestSerializer
 class ScheduleRequesterView(generics.ListAPIView):
     
     def get(self, request, *args, **kwargs):
-        
-        trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status__in=["Approved", "Rescheduled"])
-        await_resched_trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Awaiting Rescheduling")
+        trip_data = []
+        trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
+        await_resched_trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Awaiting Vehicle Alteration")
 
-        # if not trips:
-        #     raise PermissionDenied
         if trips:
             trip_data = []
             for current_schedule in trips:
-                next_sched_trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled"])
+                next_sched_trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
 
                 next_schedules = next_sched_trips.filter(
                     request_id__vehicle=current_schedule.request_id.vehicle,
@@ -57,7 +55,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                 if next_schedule:
                     previous_trip = Trip.objects.filter(
                         request_id__vehicle=request_data.vehicle,
-                        request_id__status__in=["Approved", "Rescheduled"],
+                        request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"],
                         request_id__travel_date__lt=next_schedule.request_id.travel_date
                     ).order_by('-request_id__travel_date').first()
 
@@ -101,7 +99,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                         Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date])         
                     ),
                     vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling'],
+                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration'],
                     
                 ).exclude(
                     (Q(travel_date=await_resched_vehicle_return_date) & Q(travel_time__gte=await_resched_vehicle_return_time)) |
@@ -148,7 +146,7 @@ class ScheduleRequesterView(generics.ListAPIView):
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
-        trips = Trip.objects.filter(request_id__status="Approved")
+        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
 
         for trip in trips:
             request_data = Request.objects.get(request_id=trip.request_id.request_id)
@@ -198,7 +196,7 @@ class CheckVehicleAvailability(generics.ListAPIView):
             Q(return_time__lte=preferred_end_travel_time)
         ),
         vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-        status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling'],
+        status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration'],
     ).exclude(
         (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
         (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
@@ -240,7 +238,7 @@ class CheckDriverAvailability(generics.ListAPIView):
                 Q(request_id__return_time__lte=preferred_end_travel_time)
             ),
             request_id__vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            request_id__status__in=['Pending', 'Approved', 'Rescheduled'],
+            request_id__status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration'],
         ).exclude(
             (Q(request_id__travel_date=preferred_end_travel_date) & Q(request_id__travel_time__gte=preferred_end_travel_time)) |
             (Q(request_id__return_date=preferred_start_travel_date) & Q(request_id__return_time__lte=preferred_start_travel_time))
@@ -258,7 +256,7 @@ class VehicleSchedulesView(generics.ListAPIView):
         plate_number = self.request.GET.get('plate_number')
         trip_data = []
 
-        trips = Trip.objects.filter(request_id__status="Approved", request_id__vehicle__plate_number=plate_number)
+        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"], request_id__vehicle__plate_number=plate_number)
 
         for trip in trips:
             request_data = get_object_or_404(Request, request_id=trip.request_id.request_id)
@@ -285,7 +283,7 @@ class DriverSchedulesView(generics.ListAPIView):
         driver_id = self.request.GET.get('driver_id')
         trip_data = []
 
-        trips = Trip.objects.filter(request_id__status="Approved", request_id__driver_name__id=driver_id)
+        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"], request_id__driver_name__id=driver_id)
 
         for trip in trips:
             request_data = get_object_or_404(Request, request_id=trip.request_id.request_id)
@@ -320,7 +318,7 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         plate_number = request.data.get('plate_number')  
         
         vehicle = Vehicle.objects.get(plate_number=plate_number)
-        rescheduled_status = 'Rescheduled'
+        rescheduled_status = 'Approved - Alterate Vehicle'
         instance.status = rescheduled_status
         instance.vehicle = vehicle
         instance.save()

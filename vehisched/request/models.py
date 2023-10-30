@@ -52,13 +52,15 @@ class Request(models.Model):
         Vehicle_Driver_Status, on_delete=models.SET_NULL, null=True, blank=True)
     status = models.CharField(max_length=255, choices=[
         ('Approved', 'Approved'),
+        ('Approved - Alterate Vehicle', 'Approved - Alterate Vehicle'),
         ('Pending', 'Pending'),
         ('Canceled', 'Canceled'),
         ('Rescheduled', 'Rescheduled'),
         ('Completed', 'Completed'),
         ('Rejected', 'Rejected'),
+        ('Awaiting Vehicle Alteration', 'Awaiting Vehicle Alteration'),
         ('Awaiting Rescheduling', 'Awaiting Rescheduling'),
     ], null=True, blank=True)
 
-    # def __str__(self):
-    #     return self.office
+    def __str__(self):
+        return self.purpose

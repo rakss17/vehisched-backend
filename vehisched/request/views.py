@@ -416,7 +416,7 @@ class VehicleMaintenance(generics.CreateAPIView):
         print("filtered requests", filtered_requests)
 
         if filtered_requests.exists():
-            filtered_requests.update(status='Awaiting Rescheduling')
+            filtered_requests.update(status='Awaiting Vehicle Alteration')
 
             
 
