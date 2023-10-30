@@ -10,13 +10,14 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.core.serializers import serialize
 import json
-
+from rest_framework.response import Response
+from request.serializers import RequestSerializer
 
 class ScheduleRequesterView(generics.ListAPIView):
     
     def get(self, request, *args, **kwargs):
         
-        trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Approved")
+        trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status__in=["Approved", "Rescheduled"])
         await_resched_trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Awaiting Rescheduling")
 
         # if not trips:
@@ -24,7 +25,7 @@ class ScheduleRequesterView(generics.ListAPIView):
         if trips:
             trip_data = []
             for current_schedule in trips:
-                next_sched_trips = Trip.objects.filter(request_id__status="Approved")
+                next_sched_trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled"])
 
                 next_schedules = next_sched_trips.filter(
                     request_id__vehicle=current_schedule.request_id.vehicle,
@@ -56,7 +57,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                 if next_schedule:
                     previous_trip = Trip.objects.filter(
                         request_id__vehicle=request_data.vehicle,
-                        request_id__status="Approved",
+                        request_id__status__in=["Approved", "Rescheduled"],
                         request_id__travel_date__lt=next_schedule.request_id.travel_date
                     ).order_by('-request_id__travel_date').first()
 
@@ -69,11 +70,12 @@ class ScheduleRequesterView(generics.ListAPIView):
                         'next_schedule_travel_time': next_schedule.request_id.travel_time,
                         'next_schedule_vehicle': next_schedule.request_id.vehicle.plate_number,
                     })
-  
+        vehicle_recommendation = []
         if await_resched_trips:
             await_resched_trip_queryset = await_resched_trips.all()
             for await_resched_trip in await_resched_trip_queryset:
                 await_resched_trip_id = await_resched_trip.id
+                await_resched_request_id = await_resched_trip.request_id.request_id
                 await_resched_vehicle_capacity = await_resched_trip.request_id.vehicle.capacity
                 await_resched_vehicle_travel_date = await_resched_trip.request_id.travel_date
                 await_resched_vehicle_travel_time = await_resched_trip.request_id.travel_time
@@ -124,6 +126,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                 vehicle_recommendation = []
                 vehicle_recommendation.append({
                     'trip_id': await_resched_trip_id,
+                    'request_id': await_resched_request_id,
                     'travel_date': await_resched_vehicle_travel_date,
                     'travel_time': await_resched_vehicle_travel_time,
                     'return_date': await_resched_vehicle_return_date,
@@ -131,7 +134,8 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'preferred_seating_capacity': await_resched_vehicle_capacity,
                     'vehicle_data_recommendation': vehicle_data_recommendation
                 })
-
+        
+        
         if trips or await_resched_trips:
             return JsonResponse({
                 'trip_data': trip_data,
@@ -303,3 +307,59 @@ class DriverSchedulesView(generics.ListAPIView):
             })
 
         return JsonResponse(trip_data, safe=False)
+    
+
+class VehicleRecommendationAcceptance(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # channel_layer = get_channel_layer()
+
+        plate_number = request.data.get('plate_number')  
+        
+        vehicle = Vehicle.objects.get(plate_number=plate_number)
+        rescheduled_status = 'Rescheduled'
+        instance.status = rescheduled_status
+        instance.vehicle = vehicle
+        instance.save()
+
+        # requester_name = instance.requester_name
+        # requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
+
+        # vehicle_driver_status = Vehicle_Driver_Status.objects.get(description='Assigned')
+
+        # existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        # existing_vehicle_driver_status.driver_id = driver
+        # existing_vehicle_driver_status.save()
+        # # plate_number = instance.vehicle
+        # # authorized_passenger = f"{requester_full_name}, {instance.passenger_name}"
+        # trip = Trip(
+        #     # driver_name=driver,
+        #     # plate_number=plate_number,
+        #     # authorized_passenger=authorized_passenger,
+        #     request_id=instance,
+        # )
+        # trip.save()
+
+    #     async_to_sync(channel_layer.group_send)(
+    #     f"user_{instance.requester_name}", 
+    #     {
+    #         'type': 'approve_notification',
+    #         'message': f"Request {instance.request_id} has been approved.",
+    #     }
+    # )
+
+    #     notification = Notification(
+    #         owner=instance.requester_name,  
+    #         subject=f"Request {instance.request_id} has been approved",  
+    #     )
+    #     notification.save()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+
+        return Response(serializer.data)
