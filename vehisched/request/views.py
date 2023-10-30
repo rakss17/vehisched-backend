@@ -18,6 +18,7 @@ from datetime import datetime
 from dateutil.parser import parse
 from dotenv import load_dotenv
 import os
+from django.db import transaction
 
 load_dotenv()
 
@@ -344,3 +345,96 @@ class RequestCancelView(generics.UpdateAPIView):
     )
 
         return Response({'message': 'Request canceled successfully.'})
+
+
+class VehicleMaintenance(generics.CreateAPIView):
+    serializer_class = RequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Request.objects.filter(requester_name=user)
+
+        Notification.objects.filter(owner=user).update(read_status=True)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        
+        channel_layer = get_channel_layer()
+
+        plate_number = request.data.get('plate_number')
+        travel_date = request.data['travel_date']
+        travel_time = request.data['travel_time']
+        return_date = request.data['return_date']
+        return_time = request.data['return_time']
+        vehicle = Vehicle.objects.get(plate_number=plate_number)
+
+        
+        vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+            driver_id=None,
+            plate_number=vehicle,
+            status='Unavailable'
+        )
+
+        new_request = Request.objects.create(
+            requester_name=self.request.user,
+            travel_date=travel_date,
+            travel_time=travel_time,
+            return_date=return_date,
+            return_time=return_time,
+            purpose='Vehicle Maintenance',
+            status= 'Approved',
+            vehicle= vehicle,
+        )
+
+        new_request.vehicle_driver_status_id = vehicle_driver_status
+        new_request.save()
+
+
+        filtered_requests = Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+            status__in=['Approved', 'Rescheduled'],
+        )
+        print("filtered requests", filtered_requests)
+
+        if filtered_requests.exists():
+            filtered_requests.update(status='Awaiting Rescheduling')
+
+            
+
+
+
+    #     notification = Notification(
+    #         owner=self.request.user,
+    #         subject=f"Request {new_request.request_id} has been created",
+    #     )
+    #     notification.save()
+
+    #     async_to_sync(channel_layer.group_send)(
+    #     'notifications', 
+    #     {
+    #         'type': 'notify.request_canceled',
+    #         'message': f"A new request has been created by {self.request.user}",
+    #     }
+    # )
+        
+       
+        return Response(RequestSerializer(new_request).data, status=201)

@@ -57,6 +57,7 @@ class Request(models.Model):
         ('Rescheduled', 'Rescheduled'),
         ('Completed', 'Completed'),
         ('Rejected', 'Rejected'),
+        ('Awaiting Rescheduling', 'Awaiting Rescheduling'),
     ], null=True, blank=True)
 
     # def __str__(self):
