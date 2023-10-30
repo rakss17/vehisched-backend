@@ -368,6 +368,36 @@ class VehicleMaintenance(generics.CreateAPIView):
         return_time = request.data['return_time']
         vehicle = Vehicle.objects.get(plate_number=plate_number)
 
+
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            vehicle_driver_status_id__status__in = ['Unavailable'],
+            status__in=['Ongoing Vehicle Maintenance'],
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
+            return Response({'error': error_message, "type": "Maintenance"}, status=400)
+
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
             driver_id=None,
@@ -382,7 +412,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             return_date=return_date,
             return_time=return_time,
             purpose='Vehicle Maintenance',
-            status= 'Approved',
+            status= 'Ongoing Vehicle Maintenance',
             vehicle= vehicle,
         )
 

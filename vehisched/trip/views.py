@@ -99,7 +99,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                         Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date])         
                     ),
                     vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration'],
+                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
                     
                 ).exclude(
                     (Q(travel_date=await_resched_vehicle_return_date) & Q(travel_time__gte=await_resched_vehicle_return_time)) |
@@ -146,7 +146,7 @@ class ScheduleRequesterView(generics.ListAPIView):
 class ScheduleOfficeStaffView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
-        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
+        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle", 'Ongoing Vehicle Maintenance'])
 
         for trip in trips:
             request_data = Request.objects.get(request_id=trip.request_id.request_id)
@@ -196,7 +196,7 @@ class CheckVehicleAvailability(generics.ListAPIView):
             Q(return_time__lte=preferred_end_travel_time)
         ),
         vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-        status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration'],
+        status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
     ).exclude(
         (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
         (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
@@ -256,7 +256,7 @@ class VehicleSchedulesView(generics.ListAPIView):
         plate_number = self.request.GET.get('plate_number')
         trip_data = []
 
-        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"], request_id__vehicle__plate_number=plate_number)
+        trips = Trip.objects.filter(request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle", "Ongoing Vehicle Maintenance"], request_id__vehicle__plate_number=plate_number)
 
         for trip in trips:
             request_data = get_object_or_404(Request, request_id=trip.request_id.request_id)
@@ -318,8 +318,8 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         plate_number = request.data.get('plate_number')  
         
         vehicle = Vehicle.objects.get(plate_number=plate_number)
-        rescheduled_status = 'Approved - Alterate Vehicle'
-        instance.status = rescheduled_status
+        altered_vehicle_status = 'Approved - Alterate Vehicle'
+        instance.status = altered_vehicle_status
         instance.vehicle = vehicle
         instance.save()
 

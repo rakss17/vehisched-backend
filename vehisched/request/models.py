@@ -60,6 +60,7 @@ class Request(models.Model):
         ('Rejected', 'Rejected'),
         ('Awaiting Vehicle Alteration', 'Awaiting Vehicle Alteration'),
         ('Awaiting Rescheduling', 'Awaiting Rescheduling'),
+        ('Ongoing Vehicle Maintenance', 'Ongoing Vehicle Maintenance'),
     ], null=True, blank=True)
 
     def __str__(self):
