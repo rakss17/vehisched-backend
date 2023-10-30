@@ -69,9 +69,10 @@ class ScheduleRequesterView(generics.ListAPIView):
                         'next_schedule_vehicle': next_schedule.request_id.vehicle.plate_number,
                     })
         vehicle_recommendation = []
+        
         if await_resched_trips:
-            await_resched_trip_queryset = await_resched_trips.all()
-            for await_resched_trip in await_resched_trip_queryset:
+            vehicle_recommendation = []
+            for await_resched_trip in await_resched_trips:
                 await_resched_trip_id = await_resched_trip.id
                 await_resched_request_id = await_resched_trip.request_id.request_id
                 await_resched_vehicle_capacity = await_resched_trip.request_id.vehicle.capacity
@@ -121,7 +122,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                         'vehicle_recommendation_image': str(vehicle.image)
                     })
       
-                vehicle_recommendation = []
+                
                 vehicle_recommendation.append({
                     'trip_id': await_resched_trip_id,
                     'request_id': await_resched_request_id,
@@ -132,7 +133,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'preferred_seating_capacity': await_resched_vehicle_capacity,
                     'vehicle_data_recommendation': vehicle_data_recommendation
                 })
-        
+              
         
         if trips or await_resched_trips:
             return JsonResponse({
