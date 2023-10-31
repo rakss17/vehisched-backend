@@ -441,7 +441,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             ),
             vehicle=vehicle,
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
-            status__in=['Approved', 'Rescheduled'],
+            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
         )
         print("filtered requests", filtered_requests)
 

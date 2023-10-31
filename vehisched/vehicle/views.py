@@ -47,14 +47,14 @@ class VehicleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
         if serializer.is_valid():
 
-            new_image = request.FILES.get('vehicle_image', None)
+            new_image = request.FILES.get('image', None)
         
             if new_image:
 
-                if instance.vehicle_image:
-                    instance.vehicle_image.delete()
+                if instance.image:
+                    instance.image.delete()
 
-                instance.vehicle_image = new_image
+                instance.image = new_image
 
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)
