@@ -122,7 +122,11 @@ class ScheduleRequesterView(generics.ListAPIView):
                         'vehicle_recommendation_image': str(vehicle.image)
                     })
       
-                
+                if not vehicle_data_recommendation:
+                    message = 'We always strive to find the most suitable vehicle based on your preferences, but unfortunately, there are no available options at the moment.'
+                else:
+                    message = "We recommend alternative vehicles based on your preferences."
+
                 vehicle_recommendation.append({
                     'trip_id': await_resched_trip_id,
                     'request_id': await_resched_request_id,
@@ -130,6 +134,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'travel_time': await_resched_vehicle_travel_time,
                     'return_date': await_resched_vehicle_return_date,
                     'return_time': await_resched_vehicle_return_time,
+                    'message': message,
                     'preferred_seating_capacity': await_resched_vehicle_capacity,
                     'vehicle_data_recommendation': vehicle_data_recommendation
                 })
