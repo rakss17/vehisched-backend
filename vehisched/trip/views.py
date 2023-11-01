@@ -109,7 +109,7 @@ class ScheduleRequesterView(generics.ListAPIView):
 
                 available_vehicles = Vehicle.objects.exclude(plate_number__in=unavailable_vehicles)
 
-                filtered_vehicle_capacity = available_vehicles.filter(capacity__gte=await_resched_vehicle_capacity)
+                filtered_vehicle_capacity = available_vehicles.filter(capacity__lte=int(await_resched_vehicle_capacity) + 2, capacity__gte=int(await_resched_vehicle_capacity) - 2)
                 vehicle_data_recommendation = []
 
                 for vehicle in filtered_vehicle_capacity:
@@ -181,6 +181,7 @@ class CheckVehicleAvailability(generics.ListAPIView):
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
         preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+        preferred_capacity = self.request.GET.get('preferred_capacity')
 
         unavailable_vehicles = Request.objects.filter(
         (
@@ -211,7 +212,9 @@ class CheckVehicleAvailability(generics.ListAPIView):
         
         available_vehicles = Vehicle.objects.exclude(plate_number__in=unavailable_vehicles)
 
-        available_vehicles = list(available_vehicles.values())
+        available_vehicles_capacity_filtered = available_vehicles.filter(capacity__lte=int(preferred_capacity) + 2, capacity__gte=int(preferred_capacity) - 2)
+
+        available_vehicles = list(available_vehicles_capacity_filtered.values())
 
         return JsonResponse(available_vehicles, safe=False)
 

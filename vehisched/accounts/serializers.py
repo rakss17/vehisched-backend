@@ -45,11 +45,19 @@ class UserSerializer(serializers.ModelSerializer):
 class FetchedUserSerializer(serializers.ModelSerializer):
     role = serializers.CharField(
         source='role.role_name', read_only=True)
+    office = serializers.SerializerMethodField()
+
+    def get_office(self, obj):
+        if obj.office_id:
+            office_id = obj.office_id
+            office = office_id.name
+            return office
+        return None
 
     class Meta:
         model = User
         fields = ['id', 'role', 'username', 'email',
-                  'first_name', 'middle_name', 'last_name', 'mobile_number', 'is_active']
+                  'first_name', 'middle_name', 'last_name', 'mobile_number', 'is_active', 'office']
 
 class RoleByNameSerializer(serializers.Serializer):
     role_name = serializers.CharField()
