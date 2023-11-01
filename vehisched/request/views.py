@@ -137,7 +137,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         type = request.data['type']
         
 
-        if Request.objects.filter(
+        matching_requests_approved_maintenance = Request.objects.filter(
             (
                 Q(travel_date__range=[travel_date, return_date]) &
                 Q(return_date__range=[travel_date, return_date]) 
@@ -152,19 +152,26 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 Q(return_time__range=[travel_time, return_time])
             ) | (
                 Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(travel_time__gte=travel_time) &
-                Q(return_time__lte=return_time)
+                Q(return_date__range=[travel_date, return_date]) 
             ),
             vehicle=vehicle,
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            status__in=['Approved', 'Reschedule'],
+            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        ).exists():
-            error_message = "The selected vehicle is already reserved within the specified date and time range."
-            return Response({'error': error_message, "type": "Approved"}, status=400)
+        )
+
+        if matching_requests_approved_maintenance.exists():
+            
+            status = matching_requests_approved_maintenance.first().status
+
+            if status == 'Ongoing Vehicle Maintenance':
+                error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
+            else: 
+                error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
+            
+            return Response({'error': error_message}, status=400)
         
         if Request.objects.filter(
             (
@@ -184,20 +191,20 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 Q(return_date__range=[travel_date, return_date])         
             ),
             vehicle=vehicle,
-            status__in=['Pending']
+            status__in=['Pending', 'Awaiting Vehicle Alteration']
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
             error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
-            return Response({'error': error_message, "type": "Pending"}, status=400)
+            return Response({'error': error_message}, status=400)
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
             driver_id=None,
             plate_number=vehicle,
             status='Reserved - Assigned'
         )
-
+        
         new_request = Request.objects.create(
             requester_name=self.request.user,
             travel_date=travel_date,
@@ -396,7 +403,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
             error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
-            return Response({'error': error_message, "type": "Maintenance"}, status=400)
+            return Response({'error': error_message}, status=400)
 
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -443,7 +450,6 @@ class VehicleMaintenance(generics.CreateAPIView):
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
             status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
         )
-        print("filtered requests", filtered_requests)
 
         if filtered_requests.exists():
             filtered_requests.update(status='Awaiting Vehicle Alteration')

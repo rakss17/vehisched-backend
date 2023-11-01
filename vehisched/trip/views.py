@@ -330,8 +330,11 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         altered_vehicle_status = 'Approved - Alterate Vehicle'
         instance.status = altered_vehicle_status
         instance.vehicle = vehicle
+        if instance.vehicle_driver_status_id:
+            instance.vehicle_driver_status_id.plate_number = vehicle
+            instance.vehicle_driver_status_id.save()
+        
         instance.save()
-
         # requester_name = instance.requester_name
         # requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
 
