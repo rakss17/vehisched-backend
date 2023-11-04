@@ -1,19 +1,17 @@
-from django.shortcuts import render
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import redirect, get_object_or_404
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import send_mail
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from rest_framework import generics, permissions, status
-from .models import User, Role
-from .serializers import UserSerializer, FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer
+from .models import User, Role, Office
+from .serializers import FetchedUserSerializer, UserUpdateSerializer, RoleByNameSerializer, OfficeSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
+
 
 User = get_user_model()
 
@@ -140,6 +138,27 @@ class DriverListView(generics.ListAPIView):
         driver_role = Role.objects.get(role_name='driver')
         queryset = User.objects.filter(role=driver_role)
         return queryset
+    
+
+class OfficeListCreateView(generics.ListCreateAPIView):
+    queryset = Office.objects.all()
+    serializer_class = OfficeSerializer
+
+    def create(self, request, *args, **kwargs):
+        name = request.data.get('name')
+        capitalized_name = name.upper() 
+
+       
+        if Office.objects.filter(name=capitalized_name).exists():
+            error_message = "This office is already exists."
+            return Response({'error': error_message}, status=400)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.validated_data['name'] = capitalized_name 
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 @api_view(['POST'])

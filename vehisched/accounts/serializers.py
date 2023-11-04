@@ -1,14 +1,14 @@
 from rest_framework import serializers
-from .models import User, Role
+from .models import User, Role, Office
 
 
 class UserSerializer(serializers.ModelSerializer):
-
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
-
+    office_id= serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=[])
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [(role.role_name, role.role_name) for role in Role.objects.all()]
@@ -16,15 +16,20 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['role', 'username', 'email', 'first_name', 'middle_name', 'last_name', 'password',
-                  'mobile_number']
-                  
+                  'mobile_number', 'office_id']
 
     def save(self, **kwargs):
+        role_name = self.validated_data.get('role')
+        office_name = self.validated_data.get('office_id')
 
-        role_name = self.validated_data.get('role')  
+        try:
+            office = Office.objects.get(name=office_name)
+        except Office.DoesNotExist:
+            raise serializers.ValidationError("Invalid office_id")
+        
         if role_name:
             role = Role.objects.get(role_name=role_name)
-
+            
             user = User.objects.create_user(
                 username=self.validated_data['username'],
                 email=self.validated_data['email'],
@@ -33,13 +38,16 @@ class UserSerializer(serializers.ModelSerializer):
                 last_name=self.validated_data['last_name'],
                 password=self.validated_data['password'],
                 mobile_number=self.validated_data['mobile_number'],
-                role=role  
+                role=role,
+                office_id=office 
             )
 
             user.is_active = False
             user.save()
 
             return user
+
+
 
 
 class FetchedUserSerializer(serializers.ModelSerializer):
@@ -73,3 +81,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['username', 'email', 'first_name',
                   'middle_name', 'last_name', 'mobile_number', 'role']
+        
+class OfficeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Office
+        fields = '__all__'
