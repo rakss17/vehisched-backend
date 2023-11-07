@@ -101,7 +101,9 @@ class UserUpdateView(generics.UpdateAPIView):
             return Response({"error": "Role not found"}, status=status.HTTP_404_NOT_FOUND)
 
         user.role = role_instance
-
+        office_name = request.data.get('office', user.office)
+        office = Office.objects.get(name=office_name)
+      
         user_data_to_update = {
             'username': request.data.get('username', user.username),
             'email': request.data.get('email', user.email),
@@ -109,6 +111,7 @@ class UserUpdateView(generics.UpdateAPIView):
             'middle_name': request.data.get('middle_name', user.middle_name),
             'last_name': request.data.get('last_name', user.last_name),
             'mobile_number': request.data.get('mobile_number', user.mobile_number),
+            'office': office
         }
 
         user_serializer = UserUpdateSerializer(

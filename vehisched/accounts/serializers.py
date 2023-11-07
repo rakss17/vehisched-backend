@@ -6,7 +6,7 @@ class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
-    office_id= serializers.CharField(write_only=True)
+    office= serializers.CharField(write_only=True)
     role = serializers.ChoiceField(choices=[])
 
     def __init__(self, *args, **kwargs):
@@ -16,16 +16,16 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['role', 'username', 'email', 'first_name', 'middle_name', 'last_name', 'password',
-                  'mobile_number', 'office_id']
+                  'mobile_number', 'office']
 
     def save(self, **kwargs):
         role_name = self.validated_data.get('role')
-        office_name = self.validated_data.get('office_id')
+        office_name = self.validated_data.get('office')
 
         try:
             office = Office.objects.get(name=office_name)
         except Office.DoesNotExist:
-            raise serializers.ValidationError("Invalid office_id")
+            raise serializers.ValidationError("Invalid office")
         
         if role_name:
             role = Role.objects.get(role_name=role_name)
@@ -39,7 +39,7 @@ class UserSerializer(serializers.ModelSerializer):
                 password=self.validated_data['password'],
                 mobile_number=self.validated_data['mobile_number'],
                 role=role,
-                office_id=office 
+                office=office 
             )
 
             user.is_active = False
@@ -47,18 +47,15 @@ class UserSerializer(serializers.ModelSerializer):
 
             return user
 
-
-
-
 class FetchedUserSerializer(serializers.ModelSerializer):
     role = serializers.CharField(
         source='role.role_name', read_only=True)
     office = serializers.SerializerMethodField()
 
     def get_office(self, obj):
-        if obj.office_id:
-            office_id = obj.office_id
-            office = office_id.name
+        if obj.office:
+            office = obj.office
+            office = office.name
             return office
         return None
 
@@ -73,6 +70,7 @@ class RoleByNameSerializer(serializers.Serializer):
 
 class UserUpdateSerializer(serializers.ModelSerializer):
     role = serializers.ChoiceField(choices=[])
+    office = serializers.SlugRelatedField(slug_field='name', queryset=Office.objects.all())
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['role'].choices = [(role.role_name, role.role_name) for role in Role.objects.all()]
@@ -80,7 +78,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name',
-                  'middle_name', 'last_name', 'mobile_number', 'role']
+                  'middle_name', 'last_name', 'mobile_number', 'role', 'office']
         
 class OfficeSerializer(serializers.ModelSerializer):
     class Meta:
