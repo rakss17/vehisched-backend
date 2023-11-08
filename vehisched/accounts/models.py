@@ -41,7 +41,7 @@ class User(AbstractUser):
         Role, on_delete=models.CASCADE, null=True, blank=True)
     mobile_number = models.BigIntegerField(null=True, blank=True)
     middle_name = models.CharField(max_length=255, null=True, blank=True)
-    office_id = models.OneToOneField(Office, on_delete=models.SET_NULL, null=True, blank=True)
+    office = models.ForeignKey(Office, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.username

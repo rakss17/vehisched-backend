@@ -18,6 +18,7 @@ from datetime import datetime
 from dateutil.parser import parse
 from dotenv import load_dotenv
 import os
+from django.db import transaction
 
 load_dotenv()
 
@@ -136,7 +137,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         type = request.data['type']
         
 
-        if Request.objects.filter(
+        matching_requests_approved_maintenance = Request.objects.filter(
             (
                 Q(travel_date__range=[travel_date, return_date]) &
                 Q(return_date__range=[travel_date, return_date]) 
@@ -151,19 +152,26 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 Q(return_time__range=[travel_time, return_time])
             ) | (
                 Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(travel_time__gte=travel_time) &
-                Q(return_time__lte=return_time)
+                Q(return_date__range=[travel_date, return_date]) 
             ),
             vehicle=vehicle,
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            status__in=['Approved', 'Reschedule'],
+            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        ).exists():
-            error_message = "The selected vehicle is already reserved within the specified date and time range."
-            return Response({'error': error_message, "type": "Approved"}, status=400)
+        )
+
+        if matching_requests_approved_maintenance.exists():
+            
+            status = matching_requests_approved_maintenance.first().status
+
+            if status == 'Ongoing Vehicle Maintenance':
+                error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
+            else: 
+                error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
+            
+            return Response({'error': error_message}, status=400)
         
         if Request.objects.filter(
             (
@@ -183,20 +191,20 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 Q(return_date__range=[travel_date, return_date])         
             ),
             vehicle=vehicle,
-            status__in=['Pending']
+            status__in=['Pending', 'Awaiting Vehicle Alteration']
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
             error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
-            return Response({'error': error_message, "type": "Pending"}, status=400)
+            return Response({'error': error_message}, status=400)
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
             driver_id=None,
             plate_number=vehicle,
             status='Reserved - Assigned'
         )
-
+        
         new_request = Request.objects.create(
             requester_name=self.request.user,
             travel_date=travel_date,
@@ -344,3 +352,125 @@ class RequestCancelView(generics.UpdateAPIView):
     )
 
         return Response({'message': 'Request canceled successfully.'})
+
+
+class VehicleMaintenance(generics.CreateAPIView):
+    serializer_class = RequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Request.objects.filter(requester_name=user)
+
+        Notification.objects.filter(owner=user).update(read_status=True)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        
+        channel_layer = get_channel_layer()
+
+        plate_number = request.data.get('plate_number')
+        travel_date = request.data['travel_date']
+        travel_time = request.data['travel_time']
+        return_date = request.data['return_date']
+        return_time = request.data['return_time']
+        vehicle = Vehicle.objects.get(plate_number=plate_number)
+
+
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            vehicle_driver_status_id__status__in = ['Unavailable'],
+            status__in=['Ongoing Vehicle Maintenance'],
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
+            return Response({'error': error_message}, status=400)
+
+        
+        vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+            driver_id=None,
+            plate_number=vehicle,
+            status='Unavailable'
+        )
+
+        new_request = Request.objects.create(
+            requester_name=self.request.user,
+            travel_date=travel_date,
+            travel_time=travel_time,
+            return_date=return_date,
+            return_time=return_time,
+            purpose='Vehicle Maintenance',
+            status= 'Ongoing Vehicle Maintenance',
+            vehicle= vehicle,
+        )
+
+        new_request.vehicle_driver_status_id = vehicle_driver_status
+        new_request.save()
+
+
+        filtered_requests = Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            vehicle=vehicle,
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
+        )
+
+        if filtered_requests.exists():
+            filtered_requests.update(status='Awaiting Vehicle Alteration')
+
+            
+
+
+
+    #     notification = Notification(
+    #         owner=self.request.user,
+    #         subject=f"Request {new_request.request_id} has been created",
+    #     )
+    #     notification.save()
+
+    #     async_to_sync(channel_layer.group_send)(
+    #     'notifications', 
+    #     {
+    #         'type': 'notify.request_canceled',
+    #         'message': f"A new request has been created by {self.request.user}",
+    #     }
+    # )
+        
+       
+        return Response(RequestSerializer(new_request).data, status=201)
