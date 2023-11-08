@@ -474,3 +474,160 @@ class VehicleMaintenance(generics.CreateAPIView):
         
        
         return Response(RequestSerializer(new_request).data, status=201)
+    
+
+class DriverAbsence(generics.CreateAPIView):
+    serializer_class = RequestSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Request.objects.filter(requester_name=user)
+
+        Notification.objects.filter(owner=user).update(read_status=True)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        
+        channel_layer = get_channel_layer()
+
+        driver_id = request.data.get('driver')
+        travel_date = request.data['travel_date']
+        travel_time = request.data['travel_time']
+        return_date = request.data['return_date']
+        return_time = request.data['return_time']
+        driver = User.objects.get(id=driver_id)
+
+
+        # if Request.objects.filter(
+        #     (
+        #         Q(travel_date__range=[travel_date, return_date]) &
+        #         Q(return_date__range=[travel_date, return_date]) 
+        #     ) | (
+        #         Q(travel_date__range=[travel_date, return_date]) |
+        #         Q(return_date__range=[travel_date, return_date])
+        #     ) | (
+        #         Q(travel_date__range=[travel_date, return_date]) &
+        #         Q(travel_time__range=[travel_time, return_time])
+        #     ) | (
+        #         Q(return_date__range=[travel_date, return_date]) &
+        #         Q(return_time__range=[travel_time, return_time])
+        #     ) | (
+        #         Q(travel_date__range=[travel_date, return_date]) &
+        #         Q(return_date__range=[travel_date, return_date]) &
+        #         Q(travel_time__gte=travel_time) &
+        #         Q(return_time__lte=return_time)
+        #     ),
+        #     vehicle=vehicle,
+        #     vehicle_driver_status_id__status__in = ['Unavailable'],
+        #     status__in=['Ongoing Vehicle Maintenance'],
+        # ).exclude(
+        #     (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+        #     (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        # ).exists():
+        #     error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
+        #     return Response({'error': error_message}, status=400)
+
+        
+        vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+            driver_id=driver,
+            plate_number=None,
+            status='Unavailable'
+        )
+
+        new_request = Request.objects.create(
+            requester_name=self.request.user,
+            travel_date=travel_date,
+            travel_time=travel_time,
+            return_date=return_date,
+            return_time=return_time,
+            purpose='Driver Absence',
+            driver_name=driver,
+        )
+
+        new_request.vehicle_driver_status_id = vehicle_driver_status
+        new_request.save()
+
+
+        filtered_requests = Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(travel_time__gte=travel_time) &
+                Q(return_time__lte=return_time)
+            ),
+            driver_name=driver,
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
+        )
+
+        if filtered_requests.exists():
+            unavailable_drivers = Request.objects.filter(
+                    (
+                        Q(travel_date__range=[travel_date, return_date]) &
+                        Q(return_date__range=[travel_date, return_date]) 
+                    ) | (
+                        Q(travel_date__range=[travel_date, return_date]) |
+                        Q(return_date__range=[travel_date, return_date]) 
+                    ) | (
+                        Q(travel_date__range=[travel_date, return_date]) &
+                        Q(travel_time__range=[travel_time, return_time])
+                    ) | (
+                        Q(return_date__range=[travel_date, return_date]) &
+                        Q(return_time__range=[travel_time, return_time])
+                    ) | (
+                        Q(travel_date__range=[travel_date, return_date]) &
+                        Q(return_date__range=[travel_date, return_date])         
+                    ),
+                    vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],              
+                ).exclude(
+                    (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                    (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+                ).values_list('user', flat=True)
+            
+            available_driver = User.objects.exclude(user__in=unavailable_drivers)
+            driver_role = Role.objects.get(role_name='driver')   
+            available_filtered_driver_role = available_driver.filter(role = driver_role)
+            first_available_filtered_driver_role = available_filtered_driver_role.first()
+
+            filtered_requests.update(driver_name = first_available_filtered_driver_role)
+
+
+
+
+            
+            
+
+
+            
+
+
+
+    #     notification = Notification(
+    #         owner=self.request.user,
+    #         subject=f"Request {new_request.request_id} has been created",
+    #     )
+    #     notification.save()
+
+    #     async_to_sync(channel_layer.group_send)(
+    #     'notifications', 
+    #     {
+    #         'type': 'notify.request_canceled',
+    #         'message': f"A new request has been created by {self.request.user}",
+    #     }
+    # )
+        
+       
+        return Response(RequestSerializer(new_request).data, status=201)
