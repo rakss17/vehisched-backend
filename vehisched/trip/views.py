@@ -249,8 +249,9 @@ class CheckDriverAvailability(generics.ListAPIView):
         ).exclude(
             (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
             (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
+        ).exclude(
+            driver_name__username=None
         ).values_list('driver_name__username', flat=True)
-
 
         available_drivers = User.objects.filter(role__role_name='driver').exclude(username__in=unavailable_drivers)
 
