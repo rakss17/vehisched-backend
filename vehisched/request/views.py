@@ -541,6 +541,7 @@ class DriverAbsence(generics.CreateAPIView):
             return_date=return_date,
             return_time=return_time,
             purpose='Driver Absence',
+            status= 'Driver Absence',
             driver_name=driver,
         )
 
@@ -591,7 +592,7 @@ class DriverAbsence(generics.CreateAPIView):
                         Q(return_date__range=[travel_date, return_date])         
                     ),
                     vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],              
+                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance', 'Driver Absence'],              
                 ).exclude(
                     (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
                     (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
@@ -603,17 +604,6 @@ class DriverAbsence(generics.CreateAPIView):
             first_available_filtered_driver_role = available_filtered_driver_role.first()
 
             filtered_requests.update(driver_name = first_available_filtered_driver_role)
-
-
-
-
-            
-            
-
-
-            
-
-
 
     #     notification = Notification(
     #         owner=self.request.user,
