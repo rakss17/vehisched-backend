@@ -312,26 +312,47 @@ class DriverSchedulesView(generics.ListAPIView):
         driver_id = self.request.GET.get('driver_id')
         trip_data = []
 
-        trips = Request.objects.filter(status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle", "Driver Absence"], vehicle_driver_status_id__status__in=['Unavailable'], driver_name__id=driver_id)
+        trips = Request.objects.filter(status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle", "Driver Absence"], driver_name__id=driver_id)
 
         for trip in trips:
-            request_data = get_object_or_404(Request, request_id=trip.request_id)
-            driver_data = get_object_or_404(User, username=trip.driver_name)
-            
-            trip_data.append({
-                'trip_id': trip.request_id,
-                'request_id': request_data.request_id,
-                'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}",
-                'travel_date': request_data.travel_date,
-                'travel_time': request_data.travel_time,
-                'return_date': request_data.return_date,
-                'return_time': request_data.return_time,
-                'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}",
-                'contact_no_of_driver': driver_data.mobile_number,
-                'destination': request_data.purpose,
-                'vehicle': request_data.vehicle,
-                'status': trip.status,
-            })
+            if trip.status == 'Driver Absence':
+                request_data_list = Request.objects.filter(request_id=trip.request_id)
+                driver_data_list = User.objects.filter(username=trip.driver_name)
+
+                for request_data in request_data_list:
+                    for driver_data in driver_data_list:
+                        trip_data.append({
+                            'trip_id': trip.request_id,
+                            'request_id': request_data.request_id if request_data else None,
+                            'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                            'travel_date': request_data.travel_date if request_data else None,
+                            'travel_time': request_data.travel_time if request_data else None,
+                            'return_date': request_data.return_date if request_data else None,
+                            'return_time': request_data.return_time if request_data else None,
+                            'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}" if driver_data else None,
+                            'contact_no_of_driver': driver_data.mobile_number if driver_data else None,
+                            'destination': request_data.purpose if request_data else None,
+                            'status': trip.status,
+                        })
+            else:
+                request_data_list = Request.objects.filter(request_id=trip.request_id)
+                driver_data_list = User.objects.filter(username=trip.driver_name)
+                for request_data in request_data_list:
+                    for driver_data in driver_data_list:
+                        trip_data.append({
+                            'trip_id': trip.request_id,
+                            'request_id': request_data.request_id if request_data else None,
+                            'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                            'travel_date': request_data.travel_date if request_data else None,
+                            'travel_time': request_data.travel_time if request_data else None,
+                            'return_date': request_data.return_date if request_data else None,
+                            'return_time': request_data.return_time if request_data else None,
+                            'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}" if driver_data else None,
+                            'contact_no_of_driver': driver_data.mobile_number if driver_data else None,
+                            'destination': request_data.destination if request_data else None,
+                            'vehicle': request_data.vehicle.plate_number if request_data else None,
+                            'status': trip.status,
+                        })    
 
         return JsonResponse(trip_data, safe=False)
     

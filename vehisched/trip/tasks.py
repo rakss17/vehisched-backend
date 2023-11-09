@@ -11,7 +11,7 @@ from asgiref.sync import async_to_sync
 def check_travel_dates():
     channel_layer = get_channel_layer()
     
-    trips = Trip.objects.filter(request_id__status="Approved")
+    trips = Trip.objects.filter(request_id__status__in=["Approved", "Approved - Alterate Vehicle"])
     
     for trip in trips:
         request_data = Request.objects.get(request_id=trip.request_id.request_id)
@@ -83,3 +83,34 @@ def check_travel_dates():
                     purpose=trip.id
                 )
                 notification.save()
+
+    requests = Request.objects.filter(status__in=["Ongoing Vehicle Maintenance", "Driver Absence"])
+
+    for request in requests:
+        travel_datetime = datetime.combine(request.return_date, request.return_time)
+        travel_datetime = timezone.make_aware(travel_datetime)
+
+        time_zone = timezone.localtime(timezone.now())
+
+
+        if time_zone >= travel_datetime:
+            request.status = 'Completed'
+            request.save()
+        #     existing_notification = Notification.objects.filter(
+        #         owner=request_data.requester_name, 
+        #         subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!", 
+        #         purpose=trip.id).exists()
+        #     if not existing_notification:
+        #         async_to_sync(channel_layer.group_send)(
+        #     f"user_{request_data.requester_name}", 
+        #     {
+        #         'type': 'schedule.reminder',
+        #         'message': "Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
+        #     }
+        # )
+        #         notification = Notification(
+        #             owner=request_data.requester_name,
+        #             subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
+        #             purpose=trip.id
+        #         )
+        #         notification.save()
