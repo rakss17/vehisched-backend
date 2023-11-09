@@ -572,7 +572,7 @@ class DriverAbsence(generics.CreateAPIView):
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
             status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
         )
-        print("filtered request", filtered_requests)
+
         if filtered_requests.exists():
             unavailable_drivers = Request.objects.filter(
                     (
@@ -599,13 +599,11 @@ class DriverAbsence(generics.CreateAPIView):
                 ).exclude(
                     driver_name__username=None
                 ).values_list('driver_name__username', flat=True)
-            print("unavailable driver", unavailable_drivers)
             
             available_drivers = User.objects.filter(role__role_name='driver').exclude(username__in=unavailable_drivers)
 
-            print("available drivers: ", available_drivers)
             first_available_driver = available_drivers.first()
-            print("first avaialble driver", first_available_driver)
+    
             filtered_requests.update(driver_name=first_available_driver)
 
     #     notification = Notification(
