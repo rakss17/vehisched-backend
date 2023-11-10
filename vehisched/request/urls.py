@@ -15,4 +15,6 @@ urlpatterns = [
     path('place-details/', views.get_place_details, name='place-details'),
     path('maintenance-absence-completed/<int:pk>/', views.MaintenanceAbsenceCompletedView.as_view(),
         name='maintenance-absence-completed'),
+    path('reject-request/<int:pk>/', views.RejectRequestView.as_view(),
+        name='reject-request'),
 ]

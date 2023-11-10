@@ -60,7 +60,15 @@ class NotificationApprovalScheduleReminderConsumer(AsyncWebsocketConsumer):
             await self.schedule_reminder({
                 'message': "Notification message goes here"
             })
-
+        elif action == 'reject':
+            await self.approve_notification({
+                'message': 'Notification message goes here' 
+            })
+           
+    async def reject_notification(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'reject.notification','message': message, 'status': 'Rejected'}))
+        
     async def approve_notification(self, event):
         message = event['message']
         await self.send(text_data=json.dumps({'type': 'approve.notification','message': message, 'status': 'Approved'}))

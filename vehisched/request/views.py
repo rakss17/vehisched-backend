@@ -402,7 +402,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
-            error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
+            error_message = "The selected vehicle is already scheduled for maintenance within the specified date and time range."
             return Response({'error': error_message}, status=400)
 
         
@@ -498,34 +498,32 @@ class DriverAbsence(generics.CreateAPIView):
         driver = User.objects.get(id=driver_id)
 
 
-        # if Request.objects.filter(
-        #     (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(return_date__range=[travel_date, return_date]) 
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) |
-        #         Q(return_date__range=[travel_date, return_date])
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(travel_time__range=[travel_time, return_time])
-        #     ) | (
-        #         Q(return_date__range=[travel_date, return_date]) &
-        #         Q(return_time__range=[travel_time, return_time])
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(return_date__range=[travel_date, return_date]) &
-        #         Q(travel_time__gte=travel_time) &
-        #         Q(return_time__lte=return_time)
-        #     ),
-        #     vehicle=vehicle,
-        #     vehicle_driver_status_id__status__in = ['Unavailable'],
-        #     status__in=['Ongoing Vehicle Maintenance'],
-        # ).exclude(
-        #     (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-        #     (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        # ).exists():
-        #     error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
-        #     return Response({'error': error_message}, status=400)
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date])
+            ),
+            driver_name=driver,
+            vehicle_driver_status_id__status__in = ['Unavailable'],
+            status__in=['Driver Absence'],
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected driver has already scheduled for absence within the specified date and time range."
+            return Response({'error': error_message}, status=400)
 
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -605,22 +603,7 @@ class DriverAbsence(generics.CreateAPIView):
             first_available_driver = available_drivers.first()
     
             filtered_requests.update(driver_name=first_available_driver)
-
-    #     notification = Notification(
-    #         owner=self.request.user,
-    #         subject=f"Request {new_request.request_id} has been created",
-    #     )
-    #     notification.save()
-
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A new request has been created by {self.request.user}",
-    #     }
-    # )
         
-       
         return Response(RequestSerializer(new_request).data, status=201)
     
 
@@ -631,9 +614,6 @@ class MaintenanceAbsenceCompletedView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        # channel_layer = get_channel_layer()
-        # office_staff_role = Role.objects.get(role_name='office staff')     
-        # office_staff_users = User.objects.filter(role=office_staff_role)
 
         instance.status = 'Completed'
         instance.save()
@@ -643,20 +623,38 @@ class MaintenanceAbsenceCompletedView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-    #     for user in office_staff_users:
-        
-    #         notification = Notification(
-    #             owner=user,
-    #             subject=f"A request has been canceled by {self.request.user}",
-    #         )
-    #         notification.save()
+        return Response({'message': 'Success'})
+    
 
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A request has been canceled by {self.request.user}",
-    #     }
-    # )
+class RejectRequestView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
 
-        return Response({'message': 'Completed'})
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        channel_layer = get_channel_layer()
+
+        instance.status = 'Rejected'
+        instance.save()
+
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        existing_vehicle_driver_status.status = 'Available'
+        existing_vehicle_driver_status.save()
+
+        async_to_sync(channel_layer.group_send)(
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'reject_notification',
+                'message': f"Request {instance.request_id} has been rejected.",
+            }
+        )
+
+        notification = Notification(
+            owner=instance.requester_name,  
+            subject=f"Request {instance.request_id} has been rejected",  
+        )
+        notification.save()
+
+        return Response({'message': 'Success'})

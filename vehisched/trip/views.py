@@ -156,7 +156,8 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
 
         for trip in trips:
             request_data = Request.objects.get(request_id=trip.request_id)
-            driver_data = User.objects.get(username=trip.driver_name)
+            if trip.driver_name:
+                driver_data = User.objects.get(username=trip.driver_name)
             trip_data.append({
                 'trip_id': trip.request_id,
                 'request_id': request_data.request_id,
