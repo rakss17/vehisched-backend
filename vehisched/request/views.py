@@ -622,3 +622,41 @@ class DriverAbsence(generics.CreateAPIView):
         
        
         return Response(RequestSerializer(new_request).data, status=201)
+    
+
+class MaintenanceAbsenceCompletedView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # channel_layer = get_channel_layer()
+        # office_staff_role = Role.objects.get(role_name='office staff')     
+        # office_staff_users = User.objects.filter(role=office_staff_role)
+
+        instance.status = 'Completed'
+        instance.save()
+
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        existing_vehicle_driver_status.status = 'Available'
+        existing_vehicle_driver_status.save()
+
+    #     for user in office_staff_users:
+        
+    #         notification = Notification(
+    #             owner=user,
+    #             subject=f"A request has been canceled by {self.request.user}",
+    #         )
+    #         notification.save()
+
+    #     async_to_sync(channel_layer.group_send)(
+    #     'notifications', 
+    #     {
+    #         'type': 'notify.request_canceled',
+    #         'message': f"A request has been canceled by {self.request.user}",
+    #     }
+    # )
+
+        return Response({'message': 'Completed'})

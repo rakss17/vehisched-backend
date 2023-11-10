@@ -13,4 +13,6 @@ urlpatterns = [
     path('vehicle-maintenance/', views.VehicleMaintenance.as_view(), name='vehicle-maintenance'),
     path('driver-absence/', views.DriverAbsence.as_view(), name='driver-absence'),
     path('place-details/', views.get_place_details, name='place-details'),
+    path('maintenance-absence-completed/<int:pk>/', views.MaintenanceAbsenceCompletedView.as_view(),
+        name='maintenance-absence-completed'),
 ]
