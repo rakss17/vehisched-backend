@@ -37,7 +37,10 @@ class ScheduleRequesterView(generics.ListAPIView):
                 previous_trip_id = None
 
                 request_data = get_object_or_404(Request, request_id=current_schedule.request_id.request_id)
-                driver_data = get_object_or_404(User, username=current_schedule.request_id.driver_name)
+                if current_schedule.request_id.driver_name:
+                    driver_data = get_object_or_404(User, username=current_schedule.request_id.driver_name)
+                else:
+                    driver_data = None
 
                 trip_data.append({
                     'trip_id': current_schedule.id,
@@ -45,8 +48,8 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'travel_time': request_data.travel_time,
                     'return_date': request_data.return_date,
                     'return_time': request_data.return_time,
-                    'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}",
-                    'contact_no_of_driver': driver_data.mobile_number,
+                    'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}" if driver_data else "",
+                    'contact_no_of_driver': driver_data.mobile_number if driver_data else "",
                     'destination': request_data.destination,
                     'vehicle': f"{request_data.vehicle.plate_number} {request_data.vehicle.model}",
                     'status': current_schedule.request_id.status,
