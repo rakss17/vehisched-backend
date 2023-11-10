@@ -61,6 +61,7 @@ class Request(models.Model):
         ('Awaiting Vehicle Alteration', 'Awaiting Vehicle Alteration'),
         ('Awaiting Rescheduling', 'Awaiting Rescheduling'),
         ('Ongoing Vehicle Maintenance', 'Ongoing Vehicle Maintenance'),
+        ('Driver Absence', 'Driver Absence'),
     ], null=True, blank=True)
 
     def __str__(self):
