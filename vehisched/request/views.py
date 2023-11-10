@@ -605,22 +605,7 @@ class DriverAbsence(generics.CreateAPIView):
             first_available_driver = available_drivers.first()
     
             filtered_requests.update(driver_name=first_available_driver)
-
-    #     notification = Notification(
-    #         owner=self.request.user,
-    #         subject=f"Request {new_request.request_id} has been created",
-    #     )
-    #     notification.save()
-
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A new request has been created by {self.request.user}",
-    #     }
-    # )
         
-       
         return Response(RequestSerializer(new_request).data, status=201)
     
 
@@ -631,9 +616,6 @@ class MaintenanceAbsenceCompletedView(generics.UpdateAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        # channel_layer = get_channel_layer()
-        # office_staff_role = Role.objects.get(role_name='office staff')     
-        # office_staff_users = User.objects.filter(role=office_staff_role)
 
         instance.status = 'Completed'
         instance.save()
@@ -643,20 +625,38 @@ class MaintenanceAbsenceCompletedView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-    #     for user in office_staff_users:
-        
-    #         notification = Notification(
-    #             owner=user,
-    #             subject=f"A request has been canceled by {self.request.user}",
-    #         )
-    #         notification.save()
+        return Response({'message': 'Success'})
+    
 
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A request has been canceled by {self.request.user}",
-    #     }
-    # )
+class RejectRequestView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
 
-        return Response({'message': 'Completed'})
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        channel_layer = get_channel_layer()
+
+        instance.status = 'Rejected'
+        instance.save()
+
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        existing_vehicle_driver_status.status = 'Available'
+        existing_vehicle_driver_status.save()
+
+        async_to_sync(channel_layer.group_send)(
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'reject_notification',
+                'message': f"Request {instance.request_id} has been rejected.",
+            }
+        )
+
+        notification = Notification(
+            owner=instance.requester_name,  
+            subject=f"Request {instance.request_id} has been rejected",  
+        )
+        notification.save()
+
+        return Response({'message': 'Success'})
