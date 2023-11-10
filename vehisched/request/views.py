@@ -402,7 +402,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
             (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
         ).exists():
-            error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
+            error_message = "The selected vehicle is already scheduled for maintenance within the specified date and time range."
             return Response({'error': error_message}, status=400)
 
         
@@ -498,34 +498,32 @@ class DriverAbsence(generics.CreateAPIView):
         driver = User.objects.get(id=driver_id)
 
 
-        # if Request.objects.filter(
-        #     (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(return_date__range=[travel_date, return_date]) 
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) |
-        #         Q(return_date__range=[travel_date, return_date])
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(travel_time__range=[travel_time, return_time])
-        #     ) | (
-        #         Q(return_date__range=[travel_date, return_date]) &
-        #         Q(return_time__range=[travel_time, return_time])
-        #     ) | (
-        #         Q(travel_date__range=[travel_date, return_date]) &
-        #         Q(return_date__range=[travel_date, return_date]) &
-        #         Q(travel_time__gte=travel_time) &
-        #         Q(return_time__lte=return_time)
-        #     ),
-        #     vehicle=vehicle,
-        #     vehicle_driver_status_id__status__in = ['Unavailable'],
-        #     status__in=['Ongoing Vehicle Maintenance'],
-        # ).exclude(
-        #     (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-        #     (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        # ).exists():
-        #     error_message = "The selected vehicle is currently undergoing maintenance within the specified date and time range."
-        #     return Response({'error': error_message}, status=400)
+        if Request.objects.filter(
+            (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date]) 
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) |
+                Q(return_date__range=[travel_date, return_date])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(travel_time__range=[travel_time, return_time])
+            ) | (
+                Q(return_date__range=[travel_date, return_date]) &
+                Q(return_time__range=[travel_time, return_time])
+            ) | (
+                Q(travel_date__range=[travel_date, return_date]) &
+                Q(return_date__range=[travel_date, return_date])
+            ),
+            driver_name=driver,
+            vehicle_driver_status_id__status__in = ['Unavailable'],
+            status__in=['Driver Absence'],
+        ).exclude(
+            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+        ).exists():
+            error_message = "The selected driver has already scheduled for absence within the specified date and time range."
+            return Response({'error': error_message}, status=400)
 
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
