@@ -2,7 +2,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Type, Vehicle_Driver_Status
 from trip.models import Trip
-from accounts.models import Role, User, Driver_Status
+from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer
 from vehicle.models import Vehicle
 from notification.models import Notification
@@ -15,10 +15,10 @@ from django.http import JsonResponse
 import requests
 import datetime as timedate
 from datetime import datetime
+from django.utils import timezone
 from dateutil.parser import parse
 from dotenv import load_dotenv
 import os
-from django.db import transaction
 
 load_dotenv()
 
@@ -375,6 +375,19 @@ class VehicleMaintenance(generics.CreateAPIView):
         return_time = request.data['return_time']
         vehicle = Vehicle.objects.get(plate_number=plate_number)
 
+        travel_date_converted = datetime.strptime(travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(return_date, '%Y-%m-%d').date()
+        return_time_converted = datetime.strptime(return_time, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "The starting date comes after the ending date!"
+            return Response({'error': error_message}, status=400)
 
         if Request.objects.filter(
             (
@@ -496,6 +509,20 @@ class DriverAbsence(generics.CreateAPIView):
         return_date = request.data['return_date']
         return_time = request.data['return_time']
         driver = User.objects.get(id=driver_id)
+
+        travel_date_converted = datetime.strptime(travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(return_date, '%Y-%m-%d').date()
+        return_time_converted = datetime.strptime(return_time, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "The starting date comes after the ending date!"
+            return Response({'error': error_message}, status=400)
 
 
         if Request.objects.filter(

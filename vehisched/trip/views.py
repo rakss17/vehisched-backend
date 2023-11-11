@@ -4,14 +4,13 @@ from .models import Trip
 from accounts.models import User
 from request.models import Request
 from vehicle.models import Vehicle
-from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.core.serializers import serialize
-import json
 from rest_framework.response import Response
 from request.serializers import RequestSerializer
+from datetime import datetime
+from django.utils import timezone
 
 class ScheduleRequesterView(generics.ListAPIView):
     
@@ -186,6 +185,20 @@ class CheckVehicleAvailability(generics.ListAPIView):
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
         preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
         preferred_capacity = self.request.GET.get('preferred_capacity')
+
+        travel_date_converted = datetime.strptime(preferred_start_travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(preferred_start_travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(preferred_end_travel_date, '%Y-%m-%d').date()
+        return_time_converted = datetime.strptime(preferred_end_travel_time, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "The starting date comes after the ending date!"
+            return Response({'error': error_message}, status=400)
 
         unavailable_vehicles = Request.objects.filter(
         (
