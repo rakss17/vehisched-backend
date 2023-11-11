@@ -1,6 +1,8 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from django.http import JsonResponse
 from .models import Trip
+from notification.models import Notification
+from accounts.models import Role
 from accounts.models import User
 from request.models import Request
 from vehicle.models import Vehicle
@@ -12,6 +14,10 @@ from request.serializers import RequestSerializer
 from datetime import datetime
 from django.utils import timezone
 from django.http import FileResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.core.exceptions import ObjectDoesNotExist
+
 
 class ScheduleRequesterView(generics.ListAPIView):
     
@@ -432,6 +438,56 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
+    
+class TripScannedView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+
+    def update(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        trip = Trip.objects.get(request_id=instance)
+
+        channel_layer = get_channel_layer()
+        office_staff_role = Role.objects.get(role_name='office staff')     
+        office_staff_users = User.objects.filter(role=office_staff_role)
+
+        time_zone = timezone.localtime(timezone.now())
+
+        # time_zone_12hr_format = time_zone.strftime('%Y-%m-%d %I:%M %p') 
+
+
+        if instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle':
+            existing_vehicle_driver_status = instance.vehicle_driver_status_id
+            existing_vehicle_driver_status.status = 'On Trip'
+            existing_vehicle_driver_status.save()  # Save the updated status
+
+            trip.departure_time_from_office = time_zone
+            trip.save()
+
+            for user in office_staff_users:
+                notification = Notification(
+                    owner=user,
+                    subject="A travel is on the way",
+                )
+                notification.save()
+
+            async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_completed',
+                    'message': "A travel is on the way",
+                }
+            )
+
+        
+        # existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        # existing_vehicle_driver_status.status = 'Available'
+        # existing_vehicle_driver_status.save()
+
+        
+        return Response({'message': 'Request completed successfully.'})
 
 def download_tripticket(request, request_id):
     # Get the trip object

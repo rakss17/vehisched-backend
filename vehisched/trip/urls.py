@@ -17,5 +17,6 @@ urlpatterns = [
      name='driver-schedules'),  
      path('accept-vehicle/<int:pk>/', views.VehicleRecommendationAcceptance.as_view(),
           name='accept-vehicle'),
+     path('trip-scanned/<int:pk>/', views.TripScannedView.as_view(), name='trip-scanned'),
      path('download-tripticket/<int:request_id>/', views.download_tripticket, name='download_tripticket'),
 ]

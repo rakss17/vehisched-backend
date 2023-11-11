@@ -10,7 +10,6 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 import json
 from django.db.models import Q
-from channels.layers import get_channel_layer
 from django.http import JsonResponse
 import requests
 import datetime as timedate
