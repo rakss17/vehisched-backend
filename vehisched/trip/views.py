@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from request.serializers import RequestSerializer
 from datetime import datetime
 from django.utils import timezone
+from django.http import FileResponse
 
 class ScheduleRequesterView(generics.ListAPIView):
     
@@ -431,3 +432,18 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
+
+def download_tripticket(request, request_id):
+    # Get the trip object
+    trip = Trip.objects.get(request_id=request_id)
+
+    # Get the path to the PDF file
+    pdf_path = trip.tripticket_pdf.path
+
+    # Create a FileResponse object to send the file
+    response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+
+    # Set the Content-Disposition header to make the browser download the file
+    response['Content-Disposition'] = f'attachment; filename="tripticket{request_id}.pdf"'
+
+    return response
