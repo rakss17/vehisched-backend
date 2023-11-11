@@ -17,6 +17,10 @@ import datetime as timedate
 from datetime import datetime
 from django.utils import timezone
 from dateutil.parser import parse
+import fitz
+import qrcode
+import ast
+import numpy as np
 from dotenv import load_dotenv
 import os
 
@@ -257,6 +261,8 @@ class RequestListOfficeStaffView(generics.ListAPIView):
         return super().list(request, *args, **kwargs)
 
  
+
+
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
     serializer_class = RequestSerializer
@@ -274,38 +280,79 @@ class RequestApprovedView(generics.UpdateAPIView):
         instance.driver_name = driver
         instance.save()
 
-        # requester_name = instance.requester_name
-        # requester_full_name = f"{requester_name.last_name}, {requester_name.first_name} {requester_name.middle_name}"
-
-        # vehicle_driver_status = Vehicle_Driver_Status.objects.get(description='Assigned')
-
         existing_vehicle_driver_status = instance.vehicle_driver_status_id
-
         existing_vehicle_driver_status.driver_id = driver
         existing_vehicle_driver_status.save()
-        # plate_number = instance.vehicle
-        # authorized_passenger = f"{requester_full_name}, {instance.passenger_name}"
+        
         trip = Trip(
-            # driver_name=driver,
-            # plate_number=plate_number,
-            # authorized_passenger=authorized_passenger,
             request_id=instance,
         )
         trip.save()
 
         async_to_sync(channel_layer.group_send)(
-        f"user_{instance.requester_name}", 
-        {
-            'type': 'approve_notification',
-            'message': f"Request {instance.request_id} has been approved.",
-        }
-    )
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'approve_notification',
+                'message': f"Request {instance.request_id} has been approved.",
+            }
+        )
 
         notification = Notification(
             owner=instance.requester_name,  
             subject=f"Request {instance.request_id} has been approved",  
         )
         notification.save()
+
+        
+        driver_name = instance.driver_name.get_full_name()
+        vehicle_plate_number = instance.vehicle.plate_number
+        vehicle_model = instance.vehicle.model
+        requester_name = instance.requester_name.get_full_name()
+        passenger_name = instance.passenger_name
+        destination = instance.destination
+        purpose = instance.purpose
+
+        passenger_name_list = ast.literal_eval(passenger_name)  
+        passenger_names_string = ", ".join(passenger_name_list)
+
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(instance.request_id)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        img.save("temp.png")
+
+        pixmap = fitz.Pixmap("temp.png")
+
+        doc = fitz.open('media/documents/tripticket.pdf')
+        page = doc[0] 
+
+        text_annotations = {
+            driver_name: [900, 520],
+            vehicle_plate_number +" " + vehicle_model: [900, 550],
+            requester_name+", " + passenger_names_string: [900, 590],
+            destination: [900, 620],
+            purpose: [600, 660]
+        }
+        rect = fitz.Rect(100, 100, 200, 200)  # Adjust the coordinates as needed
+        page.insert_image(rect, pixmap=pixmap)
+
+        for text, coordinates in text_annotations.items():
+            page.insert_text(coordinates, text, fontname="helv", fontsize=20)
+
+        doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
+        doc.close()
+        os.remove("temp.png")
+        # Link the PDF file with the Trip
+        trip.qr_code_data = instance.request_id
+        trip.tripticket_pdf = f"documents/tripticket{instance.request_id}.pdf"
+        trip.save()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
