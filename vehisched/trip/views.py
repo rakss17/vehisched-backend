@@ -490,6 +490,9 @@ class TripScannedView(generics.UpdateAPIView):
             existing_vehicle_driver_status.save()
 
             type = 'Completed'
+
+        elif (instance.status == 'Completed') and existing_vehicle_driver_status.status == 'Available':
+            type = 'Already Completed'
         
         return Response({'message': 'Request completed successfully.', 'type': type})
     
