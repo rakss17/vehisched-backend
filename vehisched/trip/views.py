@@ -1,17 +1,23 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from django.http import JsonResponse
 from .models import Trip
+from notification.models import Notification
+from accounts.models import Role
 from accounts.models import User
 from request.models import Request
 from vehicle.models import Vehicle
-from django.core.exceptions import PermissionDenied
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.core.serializers import serialize
-import json
 from rest_framework.response import Response
 from request.serializers import RequestSerializer
+from datetime import datetime
+from django.utils import timezone
+from django.http import FileResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+from django.core.exceptions import ObjectDoesNotExist
+
 
 class ScheduleRequesterView(generics.ListAPIView):
     
@@ -37,7 +43,10 @@ class ScheduleRequesterView(generics.ListAPIView):
                 previous_trip_id = None
 
                 request_data = get_object_or_404(Request, request_id=current_schedule.request_id.request_id)
-                driver_data = get_object_or_404(User, username=current_schedule.request_id.driver_name)
+                if current_schedule.request_id.driver_name:
+                    driver_data = get_object_or_404(User, username=current_schedule.request_id.driver_name)
+                else:
+                    driver_data = None
 
                 trip_data.append({
                     'trip_id': current_schedule.id,
@@ -45,8 +54,8 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'travel_time': request_data.travel_time,
                     'return_date': request_data.return_date,
                     'return_time': request_data.return_time,
-                    'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}",
-                    'contact_no_of_driver': driver_data.mobile_number,
+                    'driver': f"{driver_data.last_name}, {driver_data.first_name} {driver_data.middle_name}" if driver_data else "",
+                    'contact_no_of_driver': driver_data.mobile_number if driver_data else "",
                     'destination': request_data.destination,
                     'vehicle': f"{request_data.vehicle.plate_number} {request_data.vehicle.model}",
                     'status': current_schedule.request_id.status,
@@ -183,6 +192,20 @@ class CheckVehicleAvailability(generics.ListAPIView):
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
         preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
         preferred_capacity = self.request.GET.get('preferred_capacity')
+
+        travel_date_converted = datetime.strptime(preferred_start_travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(preferred_start_travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(preferred_end_travel_date, '%Y-%m-%d').date()
+        return_time_converted = datetime.strptime(preferred_end_travel_time, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "The starting date comes after the ending date!"
+            return Response({'error': error_message}, status=400)
 
         unavailable_vehicles = Request.objects.filter(
         (
@@ -415,3 +438,68 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         self.perform_update(serializer)
 
         return Response(serializer.data)
+    
+class TripScannedView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+
+    def update(self, request, *args, **kwargs):
+
+        instance = self.get_object()
+        trip = Trip.objects.get(request_id=instance)
+
+        channel_layer = get_channel_layer()
+        office_staff_role = Role.objects.get(role_name='office staff')     
+        office_staff_users = User.objects.filter(role=office_staff_role)
+
+        time_zone = timezone.localtime(timezone.now())
+
+        # time_zone_12hr_format = time_zone.strftime('%Y-%m-%d %I:%M %p') 
+
+
+        if instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle':
+            existing_vehicle_driver_status = instance.vehicle_driver_status_id
+            existing_vehicle_driver_status.status = 'On Trip'
+            existing_vehicle_driver_status.save()  # Save the updated status
+
+            trip.departure_time_from_office = time_zone
+            trip.save()
+
+            for user in office_staff_users:
+                notification = Notification(
+                    owner=user,
+                    subject="A travel is on the way",
+                )
+                notification.save()
+
+            async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_completed',
+                    'message': "A travel is on the way",
+                }
+            )
+
+        
+        # existing_vehicle_driver_status = instance.vehicle_driver_status_id
+
+        # existing_vehicle_driver_status.status = 'Available'
+        # existing_vehicle_driver_status.save()
+
+        
+        return Response({'message': 'Request completed successfully.'})
+
+def download_tripticket(request, request_id):
+    # Get the trip object
+    trip = Trip.objects.get(request_id=request_id)
+
+    # Get the path to the PDF file
+    pdf_path = trip.tripticket_pdf.path
+
+    # Create a FileResponse object to send the file
+    response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+
+    # Set the Content-Disposition header to make the browser download the file
+    response['Content-Disposition'] = f'attachment; filename="tripticket{request_id}.pdf"'
+
+    return response

@@ -17,6 +17,9 @@ celery = "*"
 django = "*"
 django-celery = "*"
 django-celery-beat = "*"
+pymupdf = "*"
+qrcode = {extras = ["pil"], version = "*"}
+numpy = "*"
 
 [dev-packages]
 
