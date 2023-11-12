@@ -455,11 +455,12 @@ class TripScannedView(generics.UpdateAPIView):
 
         # time_zone_12hr_format = time_zone.strftime('%Y-%m-%d %I:%M %p') 
 
-
-        if instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle':
+        type = None
+        existing_vehicle_driver_status = instance.vehicle_driver_status_id
+        if (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'Reserved - Assigned':
             existing_vehicle_driver_status = instance.vehicle_driver_status_id
             existing_vehicle_driver_status.status = 'On Trip'
-            existing_vehicle_driver_status.save()  # Save the updated status
+            existing_vehicle_driver_status.save()  
 
             trip.departure_time_from_office = time_zone
             trip.save()
@@ -478,15 +479,19 @@ class TripScannedView(generics.UpdateAPIView):
                     'message': "A travel is on the way",
                 }
             )
+            type = 'Authorized'
+        elif (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'On Trip':
+            existing_vehicle_driver_status = instance.vehicle_driver_status_id
+            instance.status = 'Completed'
+            trip.arrival_time_to_office = time_zone
+            trip.save()
+            instance.save()
+            existing_vehicle_driver_status.status = 'Available'
+            existing_vehicle_driver_status.save()
 
+            type = 'Completed'
         
-        # existing_vehicle_driver_status = instance.vehicle_driver_status_id
-
-        # existing_vehicle_driver_status.status = 'Available'
-        # existing_vehicle_driver_status.save()
-
-        
-        return Response({'message': 'Request completed successfully.'})
+        return Response({'message': 'Request completed successfully.', 'type': type})
     
 
 class OnTripsGateGuardView(generics.ListAPIView):
