@@ -550,6 +550,64 @@ class OnTripsGateGuardView(generics.ListAPIView):
 
         return JsonResponse(results, safe=False)
 
+class RecentLogsGateGuardView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+      
+        recent_tripss = Request.objects.filter(status__in=['Completed'], vehicle_driver_status_id__status__in=['Available']).exclude(
+            purpose='Vehicle Maintenance'
+        ).exclude(
+            purpose= 'Driver Absence'
+        )
+        recent_trips = [obj.request_id for obj in recent_tripss]
+
+        if not recent_trips:
+            return JsonResponse({'error': 'No recent trips found'})
+
+        results = []
+
+        for recent_trip in recent_trips:
+            request_fields = Request.objects.filter(request_id=recent_trip).values(
+                'requester_name__first_name',
+                'travel_date',
+                'travel_time',
+                'return_date',
+                'return_time',
+                'destination',
+                'distance',
+                'office',
+                'passenger_name',
+                'purpose',
+                'vehicle__plate_number',
+                'vehicle__model',
+                'driver_name__first_name',
+                'type'
+            )
+
+            trip_fields = Trip.objects.filter(request_id=recent_trip).values(
+                'departure_time_from_office',
+                'arrival_time_to_destination',
+                'departure_time_from_destination',
+                'arrival_time_to_office'
+            )
+            request_obj = Request.objects.get(request_id=recent_trip)
+            semi_result = {
+                'vehicle_driver_status': request_obj.vehicle_driver_status_id.status,
+                'request': list(request_fields),
+                'trip': list(trip_fields)
+            }
+
+            result = {}
+            for key, value in semi_result.items():
+                if isinstance(value, list):
+                    for item in value:
+                        result.update(item)
+                else:
+                    result[key] = value
+
+            results.append(result)
+
+        return JsonResponse(results, safe=False)
+
  
 def download_tripticket(request, request_id):
     trip = Trip.objects.get(request_id=request_id)
