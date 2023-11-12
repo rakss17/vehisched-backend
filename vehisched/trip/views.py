@@ -4,7 +4,7 @@ from .models import Trip
 from notification.models import Notification
 from accounts.models import Role
 from accounts.models import User
-from request.models import Request
+from request.models import Request, Vehicle_Driver_Status
 from vehicle.models import Vehicle
 from django.db.models import Q
 from django.http import JsonResponse
@@ -16,7 +16,6 @@ from django.utils import timezone
 from django.http import FileResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from django.core.exceptions import ObjectDoesNotExist
 
 
 class ScheduleRequesterView(generics.ListAPIView):
@@ -488,18 +487,69 @@ class TripScannedView(generics.UpdateAPIView):
 
         
         return Response({'message': 'Request completed successfully.'})
+    
 
+class OnTripsGateGuardView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+      
+        vehicle_driver_statuses = Vehicle_Driver_Status.objects.filter(status='On Trip')
+
+        if not vehicle_driver_statuses:
+            return JsonResponse({'error': 'No trips found with status "On Trip"'})
+
+        results = []
+
+        for vehicle_driver_status in vehicle_driver_statuses:
+            request_fields = Request.objects.filter(vehicle_driver_status_id=vehicle_driver_status).values(
+                'requester_name__first_name',
+                'travel_date',
+                'travel_time',
+                'return_date',
+                'return_time',
+                'destination',
+                'distance',
+                'office',
+                'passenger_name',
+                'purpose',
+                'vehicle__plate_number',
+                'vehicle__model',
+                'driver_name__first_name',
+                'type'
+            )
+
+            trip_fields = Trip.objects.filter(request_id__vehicle_driver_status_id=vehicle_driver_status).values(
+                'departure_time_from_office',
+                'arrival_time_to_destination',
+                'departure_time_from_destination',
+                'arrival_time_to_office'
+            )
+
+            semi_result = {
+                'vehicle_driver_status': vehicle_driver_status.status,
+                'request': list(request_fields),
+                'trip': list(trip_fields)
+            }
+
+            result = {}
+            for key, value in semi_result.items():
+                if isinstance(value, list):
+                    for item in value:
+                        result.update(item)
+                else:
+                    result[key] = value
+
+            results.append(result)
+
+        return JsonResponse(results, safe=False)
+
+ 
 def download_tripticket(request, request_id):
-    # Get the trip object
     trip = Trip.objects.get(request_id=request_id)
 
-    # Get the path to the PDF file
     pdf_path = trip.tripticket_pdf.path
 
-    # Create a FileResponse object to send the file
     response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
 
-    # Set the Content-Disposition header to make the browser download the file
     response['Content-Disposition'] = f'attachment; filename="tripticket{request_id}.pdf"'
 
     return response
