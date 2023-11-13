@@ -46,7 +46,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     driver_data = get_object_or_404(User, username=current_schedule.request_id.driver_name)
                 else:
                     driver_data = None
-
+   
                 trip_data.append({
                     'trip_id': current_schedule.id,
                     'travel_date': request_data.travel_date,
@@ -58,6 +58,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     'destination': request_data.destination,
                     'vehicle': f"{request_data.vehicle.plate_number} {request_data.vehicle.model}",
                     'status': current_schedule.request_id.status,
+                    'vehicle_driver_status': request_data.vehicle_driver_status_id.status
                 })
 
                 if next_schedule:
@@ -185,7 +186,14 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
 
 
 class CheckVehicleAvailability(generics.ListAPIView):
+        
     def get(self, request, *args, **kwargs):
+        def convert_time(time_string):
+            try:
+                return datetime.strptime(time_string, '%H:%M:%S').time()
+            except ValueError:
+                return datetime.strptime(time_string, '%H:%M').time()
+            
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
@@ -193,9 +201,9 @@ class CheckVehicleAvailability(generics.ListAPIView):
         preferred_capacity = self.request.GET.get('preferred_capacity')
 
         travel_date_converted = datetime.strptime(preferred_start_travel_date, '%Y-%m-%d').date()
-        travel_time_converted = datetime.strptime(preferred_start_travel_time, '%H:%M').time()
+        travel_time_converted = convert_time(preferred_start_travel_time)
         return_date_converted = datetime.strptime(preferred_end_travel_date, '%Y-%m-%d').date()
-        return_time_converted = datetime.strptime(preferred_end_travel_time, '%H:%M').time()
+        return_time_converted = convert_time(preferred_end_travel_time)
 
         travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
         travel_datetime = timezone.make_aware(travel_datetime)
