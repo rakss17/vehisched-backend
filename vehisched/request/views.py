@@ -237,7 +237,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         async_to_sync(channel_layer.group_send)(
         'notifications', 
         {
-            'type': 'notify.request_canceled',
+            'type': 'notify.request_created',
             'message': f"A new request has been created by {self.request.user}",
         }
     )

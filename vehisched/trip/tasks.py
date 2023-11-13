@@ -20,6 +20,9 @@ def check_travel_dates():
         
         time_zone = timezone.localtime(timezone.now())
 
+        # if travel_datetime < time_zone:
+        #     continue
+
         if time_zone >= travel_datetime - timedelta(days=1):
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
@@ -80,6 +83,26 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
+                    purpose=trip.id
+                )
+                notification.save()
+
+        if time_zone >= travel_datetime:
+            existing_notification = Notification.objects.filter(
+                owner=request_data.requester_name, 
+                subject="Your travel will commence now", 
+                purpose=trip.id).exists()
+            if not existing_notification:
+                async_to_sync(channel_layer.group_send)(
+            f"user_{request_data.requester_name}", 
+            {
+                'type': 'schedule.reminder',
+                'message': "Your travel will commence now",
+            }
+        )
+                notification = Notification(
+                    owner=request_data.requester_name,
+                    subject="Your travel will commence now",
                     purpose=trip.id
                 )
                 notification.save()
