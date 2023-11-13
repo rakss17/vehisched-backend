@@ -483,7 +483,7 @@ class TripScannedView(generics.UpdateAPIView):
             async_to_sync(channel_layer.group_send)(
                 'notifications', 
                 {
-                    'type': 'notify.request_completed',
+                    'type': 'notify.request_ontheway',
                     'message': "A travel is on the way",
                 }
             )
@@ -496,6 +496,21 @@ class TripScannedView(generics.UpdateAPIView):
             instance.save()
             existing_vehicle_driver_status.status = 'Available'
             existing_vehicle_driver_status.save()
+
+            for user in office_staff_users:
+                notification = Notification(
+                    owner=user,
+                    subject="A travel is completed",
+                )
+                notification.save()
+
+            async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_completed',
+                    'message': "A travel is completed",
+                }
+            )
 
             type = 'Completed'
 
