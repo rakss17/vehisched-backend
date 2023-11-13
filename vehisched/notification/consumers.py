@@ -44,7 +44,7 @@ class NotificationCreatedCanceledConsumer(AsyncWebsocketConsumer):
     
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_canceled",
-            "message": message,}))
+            "message": message, 'status': 'Canceled'}))
 
 
 class NotificationApprovalScheduleReminderConsumer(AsyncWebsocketConsumer):
@@ -85,4 +85,4 @@ class NotificationApprovalScheduleReminderConsumer(AsyncWebsocketConsumer):
 
     async def schedule_reminder(self, event):
         message = event['message']
-        await self.send(text_data=json.dumps({'type': 'schedule.reminder', 'message': message}))
+        await self.send(text_data=json.dumps({'type': 'schedule.reminder', 'message': message, 'status': 'Reminder'}))
