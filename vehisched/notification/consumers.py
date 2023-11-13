@@ -27,7 +27,7 @@ class NotificationCreatedCanceledConsumer(AsyncWebsocketConsumer):
                 'message': 'Notification message goes here for canceled' 
             })
         elif action == 'ontheway':
-            await self.notify_request_canceled({
+            await self.notify_request_ontheway({
                 'message': 'Notification message goes here for on the way' 
             })
 
@@ -43,7 +43,7 @@ class NotificationCreatedCanceledConsumer(AsyncWebsocketConsumer):
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_completed",
             "message": message, 'status': 'Completed'}))
-    async def notify_request_completed(self, event):
+    async def notify_request_ontheway(self, event):
     
         message = event["message"]
         await self.send(text_data=json.dumps({"type": "notify.request_ontheway",
