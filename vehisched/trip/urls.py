@@ -21,4 +21,5 @@ urlpatterns = [
      path('on-trips-gateguard/', views.OnTripsGateGuardView.as_view(), name='on-trips-gateguard'), 
      path('recent-trips-gateguard/', views.RecentLogsGateGuardView.as_view(), name='recent-trips-gateguard'),   
      path('download-tripticket/<int:request_id>/', views.download_tripticket, name='download_tripticket'),
+     path('driver-own-schedule/', views.DriverOwnScheduleView.as_view(), name='driver-own-schedule'), 
 ]
