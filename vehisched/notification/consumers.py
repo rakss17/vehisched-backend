@@ -79,18 +79,28 @@ class NotificationApprovalScheduleReminderConsumer(AsyncWebsocketConsumer):
                 'message': "Notification message goes here"
             })
         elif action == 'reject':
-            await self.approve_notification({
+            await self.reject_notification({
                 'message': 'Notification message goes here' 
             })
+        elif action == 'recommend':
+            await self.recommend_notification({
+                'message': 'Notification message goes here' 
+            })
+
+
+    async def approve_notification(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'approve.notification','message': message, 'status': 'Approved'}))
            
+    async def schedule_reminder(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'schedule.reminder', 'message': message, 'status': 'Reminder'}))
+
+    async def recommend_notification(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps({'type': 'recommend.notification', 'message': message, 'status': 'Recommend'}))
+
     async def reject_notification(self, event):
         message = event['message']
         await self.send(text_data=json.dumps({'type': 'reject.notification','message': message, 'status': 'Rejected'}))
         
-    async def approve_notification(self, event):
-        message = event['message']
-        await self.send(text_data=json.dumps({'type': 'approve.notification','message': message, 'status': 'Approved'}))
-
-    async def schedule_reminder(self, event):
-        message = event['message']
-        await self.send(text_data=json.dumps({'type': 'schedule.reminder', 'message': message, 'status': 'Reminder'}))

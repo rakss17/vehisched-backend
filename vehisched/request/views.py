@@ -511,7 +511,30 @@ class VehicleMaintenance(generics.CreateAPIView):
         )
 
         if filtered_requests.exists():
+            for request in filtered_requests:
+
+                travel_date_formatted = request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = request.travel_time.strftime('%I:%M %p')
+                return_date_formatted = request.return_date.strftime('%m/%d/%Y')
+                return_time_formatted = request.return_time.strftime('%I:%M %p')
+
+                notification = Notification(
+                    owner=request.requester_name,
+                    subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
+                )
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{request.requester_name}", 
+                    {
+                        'type': 'recommend_notification',
+                        'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
+                    }
+                )
             filtered_requests.update(status='Awaiting Vehicle Alteration')
+
+            
+
 
             
 
