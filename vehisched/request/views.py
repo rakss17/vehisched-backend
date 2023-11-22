@@ -455,7 +455,7 @@ class VehicleMaintenance(generics.CreateAPIView):
                 Q(return_time__lte=return_time)
             ),
             vehicle=vehicle,
-            vehicle_driver_status_id__status__in = ['Unavailable'],
+            vehicle_driver_status_id__status__in = ['Unavailable', 'On Trip'],
             status__in=['Ongoing Vehicle Maintenance'],
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
