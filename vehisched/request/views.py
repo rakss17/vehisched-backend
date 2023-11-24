@@ -1,9 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status
+from .models import Request, Type, Vehicle_Driver_Status, CSM, Question
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, QuestionSerializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -245,6 +245,29 @@ class RequestListCreateView(generics.ListCreateAPIView):
        
         return Response(RequestSerializer(new_request).data, status=201)
 
+class CSMListCreateView(generics.ListCreateAPIView):
+    serializer_class = CSMSerializer
+
+    def get_queryset(self):
+        request_id = self.kwargs['request_id']
+        return CSM.objects.filter(request__request_id=request_id)
+
+    def perform_create(self, serializer):
+        request_id = self.kwargs['request_id']
+        request = Request.objects.get(request_id=request_id)
+        serializer.save(request=request)
+
+class QuestionListCreateView(generics.ListCreateAPIView):
+    serializer_class = QuestionSerializer
+
+    def get_queryset(self):
+        csm_id = self.kwargs['csm_id']
+        return Question.objects.filter(csm__id=csm_id)
+
+    def perform_create(self, serializer):
+        csm_id = self.kwargs['csm_id']
+        csm = CSM.objects.get(id=csm_id)
+        serializer.save(csm=csm)
 
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
@@ -339,7 +362,7 @@ class RequestApprovedView(generics.UpdateAPIView):
             destination: [900, 620],
             purpose: [600, 660]
         }
-        rect = fitz.Rect(100, 100, 200, 200)  # Adjust the coordinates as needed
+        rect = fitz.Rect(100, 100, 200, 200)  
         page.insert_image(rect, pixmap=pixmap)
 
         for text, coordinates in text_annotations.items():
@@ -348,7 +371,7 @@ class RequestApprovedView(generics.UpdateAPIView):
         doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
         doc.close()
         os.remove("temp.png")
-        # Link the PDF file with the Trip
+        
         trip.qr_code_data = instance.request_id
         trip.tripticket_pdf = f"documents/tripticket{instance.request_id}.pdf"
         trip.save()

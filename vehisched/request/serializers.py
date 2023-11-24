@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Request
+from .models import Request, CSM, Question
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -78,3 +78,13 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
         fields = ['request_id', 'requester_full_name', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
                   'type', 'distance', 'vehicle_driver_status']
+        
+class CSMSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CSM
+        fields = '__all__'
+
+class QuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Question
+        fields = '__all__'

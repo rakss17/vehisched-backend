@@ -17,4 +17,6 @@ urlpatterns = [
         name='maintenance-absence-completed'),
     path('reject-request/<int:pk>/', views.RejectRequestView.as_view(),
         name='reject-request'),
+    path('csm/<int:request_id>/', views.CSMListCreateView.as_view(), name='csm'),
+    path('question-answer/<int:csm_id>/', views.QuestionListCreateView.as_view(), name='question-answer'),
 ]

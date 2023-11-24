@@ -63,6 +63,26 @@ class Request(models.Model):
         ('Ongoing Vehicle Maintenance', 'Ongoing Vehicle Maintenance'),
         ('Driver Absence', 'Driver Absence'),
     ], null=True, blank=True)
+    
 
     def __str__(self):
         return self.purpose
+
+
+class CSM(models.Model):
+    request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, blank=True)
+    client_type = models.CharField(max_length=244, null=True, blank=True)
+    region_of_residence = models.CharField(max_length=244, null=True, blank=True)
+    service_availed = models.CharField(max_length=244, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+
+    def __str__(self):
+        return self.client_type
+
+class Question(models.Model):
+    csm = models.ForeignKey(CSM, on_delete=models.CASCADE, null=True, blank=True)
+    content = models.TextField(null=True, blank=True)
+    answer = models.TextField(null=True, blank=True)
+
+    def __str__(self):
+        return self.content
