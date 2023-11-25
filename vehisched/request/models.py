@@ -80,9 +80,14 @@ class CSM(models.Model):
         return self.client_type
 
 class Question(models.Model):
+    question_number = models.CharField(max_length=100, primary_key=True, default=None)
     csm = models.ForeignKey(CSM, on_delete=models.CASCADE, null=True, blank=True)
     content = models.TextField(null=True, blank=True)
-    answer = models.TextField(null=True, blank=True)
+
+    
+class Answer(models.Model):
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
+    content = models.TextField(null=True, blank=True)
 
     def __str__(self):
         return self.content

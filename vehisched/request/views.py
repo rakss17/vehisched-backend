@@ -257,17 +257,11 @@ class CSMListCreateView(generics.ListCreateAPIView):
         request = Request.objects.get(request_id=request_id)
         serializer.save(request=request)
 
-class QuestionListCreateView(generics.ListCreateAPIView):
-    serializer_class = QuestionSerializer
-
-    def get_queryset(self):
-        csm_id = self.kwargs['csm_id']
-        return Question.objects.filter(csm__id=csm_id)
-
-    def perform_create(self, serializer):
-        csm_id = self.kwargs['csm_id']
-        csm = CSM.objects.get(id=csm_id)
-        serializer.save(csm=csm)
+class QuestionList(generics.ListAPIView):
+   def get(self, request):
+       questions = Question.objects.all()
+       serializer = QuestionSerializer(questions, many=True)
+       return Response(serializer.data)
 
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer

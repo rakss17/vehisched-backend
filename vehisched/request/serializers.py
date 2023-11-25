@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Request, CSM, Question
+from .models import Request, CSM, Question, Answer
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -79,12 +79,35 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
                   'type', 'distance', 'vehicle_driver_status']
         
-class CSMSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CSM
-        fields = '__all__'
+class AnswerSerializer(serializers.ModelSerializer):
+   class Meta:
+       model = Answer
+       fields = ['content']
 
 class QuestionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Question
-        fields = '__all__'
+   answers = AnswerSerializer(many=True)
+
+   class Meta:
+       model = Question
+       fields = ['question_number', 'content', 'answers']
+
+   def create(self, validated_data):
+       answers_data = validated_data.pop('answers')
+       question = Question.objects.create(**validated_data)
+       for answer_data in answers_data:
+           Answer.objects.create(question=question, **answer_data)
+       return question
+
+class CSMSerializer(serializers.ModelSerializer):
+   questions = QuestionSerializer(many=True)
+
+   class Meta:
+       model = CSM
+       fields = ['client_type', 'region_of_residence', 'service_availed', 'created_at', 'questions']
+
+   def create(self, validated_data):
+       questions_data = validated_data.pop('questions')
+       csm = CSM.objects.create(**validated_data)
+       for question_data in questions_data:
+           Question.objects.create(csm=csm, **question_data)
+       return csm
