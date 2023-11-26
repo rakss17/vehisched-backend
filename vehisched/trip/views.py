@@ -23,7 +23,7 @@ class ScheduleRequesterView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         trip_data = []
         trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
-        await_resched_trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Awaiting Vehicle Alteration")
+        await_alterate_trips = Trip.objects.filter(request_id__requester_name=request.user, request_id__status="Awaiting Vehicle Alteration")
 
         if trips:
             trip_data = []
@@ -79,46 +79,46 @@ class ScheduleRequesterView(generics.ListAPIView):
                     })
         vehicle_recommendation = []
         
-        if await_resched_trips:
+        if await_alterate_trips:
             vehicle_recommendation = []
-            for await_resched_trip in await_resched_trips:
-                await_resched_trip_id = await_resched_trip.id
-                await_resched_request_id = await_resched_trip.request_id.request_id
-                await_resched_vehicle_capacity = await_resched_trip.request_id.vehicle.capacity
-                await_resched_vehicle_travel_date = await_resched_trip.request_id.travel_date
-                await_resched_vehicle_travel_time = await_resched_trip.request_id.travel_time
-                await_resched_vehicle_return_date = await_resched_trip.request_id.return_date
-                await_resched_vehicle_return_time = await_resched_trip.request_id.return_time
+            for await_alterate_trip in await_alterate_trips:
+                await_alterate_trip_id = await_alterate_trip.id
+                await_alterate_request_id = await_alterate_trip.request_id.request_id
+                await_alterate_vehicle_capacity = await_alterate_trip.request_id.vehicle.capacity
+                await_alterate_vehicle_travel_date = await_alterate_trip.request_id.travel_date
+                await_alterate_vehicle_travel_time = await_alterate_trip.request_id.travel_time
+                await_alterate_vehicle_return_date = await_alterate_trip.request_id.return_date
+                await_alterate_vehicle_return_time = await_alterate_trip.request_id.return_time
 
                 
                 unavailable_vehicles = Request.objects.filter(
                     (
-                        Q(travel_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) &
-                        Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) 
+                        Q(travel_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) &
+                        Q(return_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) 
                     ) | (
-                        Q(travel_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) |
-                        Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) 
+                        Q(travel_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) |
+                        Q(return_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) 
                     ) | (
-                        Q(travel_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) &
-                        Q(travel_time__range=[await_resched_vehicle_travel_time, await_resched_vehicle_return_time])
+                        Q(travel_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) &
+                        Q(travel_time__range=[await_alterate_vehicle_travel_time, await_alterate_vehicle_return_time])
                     ) | (
-                        Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) &
-                        Q(return_time__range=[await_resched_vehicle_travel_time, await_resched_vehicle_return_time])
+                        Q(return_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) &
+                        Q(return_time__range=[await_alterate_vehicle_travel_time, await_alterate_vehicle_return_time])
                     ) | (
-                        Q(travel_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date]) &
-                        Q(return_date__range=[await_resched_vehicle_travel_date, await_resched_vehicle_return_date])         
+                        Q(travel_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date]) &
+                        Q(return_date__range=[await_alterate_vehicle_travel_date, await_alterate_vehicle_return_date])         
                     ),
                     vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
                     status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
                     
                 ).exclude(
-                    (Q(travel_date=await_resched_vehicle_return_date) & Q(travel_time__gte=await_resched_vehicle_return_time)) |
-                    (Q(return_date=await_resched_vehicle_travel_date) & Q(return_time__lte=await_resched_vehicle_travel_time))
+                    (Q(travel_date=await_alterate_vehicle_return_date) & Q(travel_time__gte=await_alterate_vehicle_return_time)) |
+                    (Q(return_date=await_alterate_vehicle_travel_date) & Q(return_time__lte=await_alterate_vehicle_travel_time))
                 ).values_list('vehicle', flat=True)
 
                 available_vehicles = Vehicle.objects.exclude(plate_number__in=unavailable_vehicles)
 
-                filtered_vehicle_capacity = available_vehicles.filter(capacity__lte=int(await_resched_vehicle_capacity) + 2, capacity__gte=int(await_resched_vehicle_capacity) - 2)
+                filtered_vehicle_capacity = available_vehicles.filter(capacity__lte=int(await_alterate_vehicle_capacity) + 2, capacity__gte=int(await_alterate_vehicle_capacity) - 2)
                 vehicle_data_recommendation = []
 
                 for vehicle in filtered_vehicle_capacity:
@@ -137,19 +137,19 @@ class ScheduleRequesterView(generics.ListAPIView):
                     message = "We recommend alternative vehicles based on your preferences."
 
                 vehicle_recommendation.append({
-                    'trip_id': await_resched_trip_id,
-                    'request_id': await_resched_request_id,
-                    'travel_date': await_resched_vehicle_travel_date,
-                    'travel_time': await_resched_vehicle_travel_time,
-                    'return_date': await_resched_vehicle_return_date,
-                    'return_time': await_resched_vehicle_return_time,
+                    'trip_id': await_alterate_trip_id,
+                    'request_id': await_alterate_request_id,
+                    'travel_date': await_alterate_vehicle_travel_date,
+                    'travel_time': await_alterate_vehicle_travel_time,
+                    'return_date': await_alterate_vehicle_return_date,
+                    'return_time': await_alterate_vehicle_return_time,
                     'message': message,
-                    'preferred_seating_capacity': await_resched_vehicle_capacity,
+                    'preferred_seating_capacity': await_alterate_vehicle_capacity,
                     'vehicle_data_recommendation': vehicle_data_recommendation
                 })
               
         
-        if trips or await_resched_trips:
+        if trips or await_alterate_trips:
             return JsonResponse({
                 'trip_data': trip_data,
                 'vehicle_recommendation': vehicle_recommendation,
@@ -545,10 +545,11 @@ class OnTripsGateGuardView(generics.ListAPIView):
                 'vehicle__plate_number',
                 'vehicle__model',
                 'driver_name__first_name',
-                'type'
+                'type__name'
             )
 
             trip_fields = Trip.objects.filter(request_id__vehicle_driver_status_id=vehicle_driver_status).values(
+                'id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',
@@ -603,10 +604,128 @@ class RecentLogsGateGuardView(generics.ListAPIView):
                 'vehicle__plate_number',
                 'vehicle__model',
                 'driver_name__first_name',
-                'type'
+                'type__name'
             )
 
             trip_fields = Trip.objects.filter(request_id=recent_trip).values(
+                'id',
+                'departure_time_from_office',
+                'arrival_time_to_destination',
+                'departure_time_from_destination',
+                'arrival_time_to_office'
+            )
+            request_obj = Request.objects.get(request_id=recent_trip)
+            semi_result = {
+                'vehicle_driver_status': request_obj.vehicle_driver_status_id.status,
+                'request': list(request_fields),
+                'trip': list(trip_fields)
+            }
+
+            result = {}
+            for key, value in semi_result.items():
+                if isinstance(value, list):
+                    for item in value:
+                        result.update(item)
+                else:
+                    result[key] = value
+
+            results.append(result)
+
+        return JsonResponse(results, safe=False)
+
+class DriverOwnScheduleView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+      
+        recent_tripss = Request.objects.filter(status__in=['Approved', 'Approved - Alterate Vehicle', 'Rescheduled'], driver_name=request.user).exclude(
+            purpose='Vehicle Maintenance'
+        ).exclude(
+            purpose= 'Driver Absence'
+        )
+        recent_trips = [obj.request_id for obj in recent_tripss]
+
+        if not recent_trips:
+            return JsonResponse({'error': 'No recent trips found'})
+
+        results = []
+
+        for recent_trip in recent_trips:
+            request_fields = Request.objects.filter(request_id=recent_trip).values(
+                'requester_name__first_name',
+                'travel_date',
+                'travel_time',
+                'return_date',
+                'return_time',
+                'destination',
+                'distance',
+                'office',
+                'passenger_name',
+                'purpose',
+                'vehicle__plate_number',
+                'vehicle__model',
+                'type__name'
+            )
+
+            trip_fields = Trip.objects.filter(request_id=recent_trip).values(
+                'id',
+                'departure_time_from_office',
+                'arrival_time_to_destination',
+                'departure_time_from_destination',
+                'arrival_time_to_office'
+            )
+            request_obj = Request.objects.get(request_id=recent_trip)
+            semi_result = {
+                'vehicle_driver_status': request_obj.vehicle_driver_status_id.status,
+                'request': list(request_fields),
+                'trip': list(trip_fields)
+            }
+
+            result = {}
+            for key, value in semi_result.items():
+                if isinstance(value, list):
+                    for item in value:
+                        result.update(item)
+                else:
+                    result[key] = value
+
+            results.append(result)
+
+        return JsonResponse(results, safe=False)
+
+class DriverTripsView(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+      
+        recent_tripss = Request.objects.filter(status__in=['Completed', 'Canceled', 'Rescheduled'], driver_name=request.user).exclude(
+            purpose='Vehicle Maintenance'
+        ).exclude(
+            purpose= 'Driver Absence'
+        )
+        recent_trips = [obj.request_id for obj in recent_tripss]
+
+        if not recent_trips:
+            return JsonResponse({'error': 'No recent trips found'})
+
+        results = []
+
+        for recent_trip in recent_trips:
+            request_fields = Request.objects.filter(request_id=recent_trip).values(
+                'requester_name__first_name',
+                'travel_date',
+                'travel_time',
+                'return_date',
+                'return_time',
+                'destination',
+                'distance',
+                'office',
+                'passenger_name',
+                'purpose',
+                'vehicle__plate_number',
+                'vehicle__model',
+                'type__name',
+                'status'
+            )
+
+            trip_fields = Trip.objects.filter(request_id=recent_trip).values(
+                'id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',

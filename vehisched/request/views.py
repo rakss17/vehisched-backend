@@ -1,9 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status
+from .models import Request, Type, Vehicle_Driver_Status, CSM, Question, Answer
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, Question2Serializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -245,6 +245,29 @@ class RequestListCreateView(generics.ListCreateAPIView):
        
         return Response(RequestSerializer(new_request).data, status=201)
 
+class CSMListCreateView(generics.ListCreateAPIView):
+    serializer_class = CSMSerializer
+
+    def get_queryset(self):
+        request_id = self.kwargs['request_id']
+        return CSM.objects.filter(request__request_id=request_id)
+
+    def perform_create(self, serializer):
+        request_id = self.kwargs['request_id']
+        request = Request.objects.get(request_id=request_id)
+        csm = serializer.save(request=request)
+
+        for question_data in self.request.data['questions']:
+            question = Question.objects.get(question_number=question_data['question_number'])
+            Answer.objects.create(question=question, content=question_data['answers'])
+
+
+
+class QuestionList(generics.ListAPIView):
+   def get(self, request):
+       questions = Question.objects.all()
+       serializer = Question2Serializer(questions, many=True)
+       return Response(serializer.data)
 
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
@@ -339,7 +362,7 @@ class RequestApprovedView(generics.UpdateAPIView):
             destination: [900, 620],
             purpose: [600, 660]
         }
-        rect = fitz.Rect(100, 100, 200, 200)  # Adjust the coordinates as needed
+        rect = fitz.Rect(100, 100, 200, 200)  
         page.insert_image(rect, pixmap=pixmap)
 
         for text, coordinates in text_annotations.items():
@@ -348,7 +371,7 @@ class RequestApprovedView(generics.UpdateAPIView):
         doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
         doc.close()
         os.remove("temp.png")
-        # Link the PDF file with the Trip
+        
         trip.qr_code_data = instance.request_id
         trip.tripticket_pdf = f"documents/tripticket{instance.request_id}.pdf"
         trip.save()
@@ -455,7 +478,7 @@ class VehicleMaintenance(generics.CreateAPIView):
                 Q(return_time__lte=return_time)
             ),
             vehicle=vehicle,
-            vehicle_driver_status_id__status__in = ['Unavailable'],
+            vehicle_driver_status_id__status__in = ['Unavailable', 'On Trip'],
             status__in=['Ongoing Vehicle Maintenance'],
         ).exclude(
             (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
@@ -511,7 +534,30 @@ class VehicleMaintenance(generics.CreateAPIView):
         )
 
         if filtered_requests.exists():
+            for request in filtered_requests:
+
+                travel_date_formatted = request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = request.travel_time.strftime('%I:%M %p')
+                return_date_formatted = request.return_date.strftime('%m/%d/%Y')
+                return_time_formatted = request.return_time.strftime('%I:%M %p')
+
+                notification = Notification(
+                    owner=request.requester_name,
+                    subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
+                )
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{request.requester_name}", 
+                    {
+                        'type': 'recommend_notification',
+                        'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
+                    }
+                )
             filtered_requests.update(status='Awaiting Vehicle Alteration')
+
+            
+
 
             
 
