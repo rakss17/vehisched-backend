@@ -1,9 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, CSM, Question
+from .models import Request, Type, Vehicle_Driver_Status, CSM, Question, Answer
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, QuestionSerializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, Question2Serializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -255,12 +255,18 @@ class CSMListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         request_id = self.kwargs['request_id']
         request = Request.objects.get(request_id=request_id)
-        serializer.save(request=request)
+        csm = serializer.save(request=request)
+
+        for question_data in self.request.data['questions']:
+            question = Question.objects.get(question_number=question_data['question_number'])
+            Answer.objects.create(question=question, content=question_data['answers'])
+
+
 
 class QuestionList(generics.ListAPIView):
    def get(self, request):
        questions = Question.objects.all()
-       serializer = QuestionSerializer(questions, many=True)
+       serializer = Question2Serializer(questions, many=True)
        return Response(serializer.data)
 
 class RequestListOfficeStaffView(generics.ListAPIView):

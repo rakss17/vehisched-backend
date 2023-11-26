@@ -79,35 +79,55 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
                   'type', 'distance', 'vehicle_driver_status']
         
-class AnswerSerializer(serializers.ModelSerializer):
-   class Meta:
-       model = Answer
-       fields = ['content']
+# class AnswerSerializer(serializers.ModelSerializer):
+#    class Meta:
+#        model = Answer
+#        fields = ['content']
 
 class QuestionSerializer(serializers.ModelSerializer):
-   answers = AnswerSerializer(many=True)
+#    answers = AnswerSerializer(many=True)
 
    class Meta:
        model = Question
-       fields = ['question_number', 'content', 'answers']
+       fields = ['question_number', 'content']
 
-   def create(self, validated_data):
-       answers_data = validated_data.pop('answers')
-       question = Question.objects.create(**validated_data)
-       for answer_data in answers_data:
-           Answer.objects.create(question=question, **answer_data)
-       return question
+#    def create(self, validated_data):
+#        answers_data = validated_data.pop('answers')
+#        question = Question.objects.create(**validated_data)
+#        for answer_data in answers_data:
+#            Answer.objects.create(question=question, **answer_data)
+#        return question
+
+class AnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Answer
+        fields = ['content']
+
+class QuestionSerializer(serializers.ModelSerializer):
+    answers = AnswerSerializer(many=True)
+
+    class Meta:
+        model = Question
+        fields = ['question_number', 'content', 'answers']
+
+class Question2Serializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Question
+        fields = ['question_number', 'content', ]
 
 class CSMSerializer(serializers.ModelSerializer):
-   questions = QuestionSerializer(many=True)
 
-   class Meta:
-       model = CSM
-       fields = ['client_type', 'region_of_residence', 'service_availed', 'created_at', 'questions']
+    class Meta:
+        model = CSM
+        fields = ['request','client_type', 'region_of_residence', 'service_availed', 'email_address', 'suggestions', 'created_at', 'question']
 
-   def create(self, validated_data):
-       questions_data = validated_data.pop('questions')
-       csm = CSM.objects.create(**validated_data)
-       for question_data in questions_data:
-           Question.objects.create(csm=csm, **question_data)
-       return csm
+    # def create(self, validated_data):
+    #     questions_data = validated_data.pop('question')
+    #     csm = CSM.objects.create(**validated_data)
+    #     for question_data in questions_data:
+    #         answers_data = question_data.pop('answers')
+    #         question = Question.objects.get(question_number=question_data['question_number'])
+    #         for answer_data in answers_data:
+    #             Answer.objects.create(question=question, **answer_data)
+    #     return csm
