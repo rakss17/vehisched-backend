@@ -8,6 +8,7 @@ urlpatterns = [
     path('activation/<uidb64>/<token>/',
          views.activate_account, name='activate_account'),
     path('admin/', views.UserListView.as_view(), name='user-list'),
+    path('fetch-vip/', views.FetchVIPUserView.as_view(), name='fetch-vip'),
     path('update/<int:pk>/', views.UserUpdateView.as_view(), name='user-update'),
     path('roles/by-name/', views.RoleByNameView.as_view(), name='role-by-name'),
     path('me/', views.UserProfileView.as_view(), name='user-profile'),

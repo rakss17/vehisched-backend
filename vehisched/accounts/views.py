@@ -65,6 +65,15 @@ class UserListView(generics.ListAPIView):
                          "driver", "gate guard", "vip"]
         queryset = User.objects.filter(role__role_name__in=allowed_roles)
         return queryset
+    
+class FetchVIPUserView(generics.ListAPIView):
+    serializer_class = FetchedUserSerializer
+    
+
+    def get_queryset(self):
+        allowed_roles = ["vip"]
+        queryset = User.objects.filter(role__role_name__in=allowed_roles)
+        return queryset
 
 
 class RoleByNameView(generics.RetrieveAPIView):
