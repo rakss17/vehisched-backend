@@ -70,6 +70,8 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_vip:
+        print(user)
+        role = self.request.GET.get('role')
+        if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
         return Vehicle.objects.filter(assigned_to=user)
