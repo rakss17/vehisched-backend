@@ -138,43 +138,45 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return_date = request.data['return_date']
         return_time = request.data['return_time']
         type = request.data['type']
+        role = request.data['role']
         
+        if not role == 'vip':
 
-        matching_requests_approved_maintenance = Request.objects.filter(
-            (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) |
-                Q(return_date__range=[travel_date, return_date])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(travel_time__range=[travel_time, return_time])
-            ) | (
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(return_time__range=[travel_time, return_time])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ),
-            vehicle=vehicle,
-            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
-        ).exclude(
-            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        )
+            matching_requests_approved_maintenance = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ),
+                vehicle=vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
+            ).exclude(
+                (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            )
 
-        if matching_requests_approved_maintenance.exists():
-            
-            status = matching_requests_approved_maintenance.first().status
+            if matching_requests_approved_maintenance.exists():
+                
+                status = matching_requests_approved_maintenance.first().status
 
-            if status == 'Ongoing Vehicle Maintenance':
-                error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
-            else: 
-                error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
-            
-            return Response({'error': error_message}, status=400)
+                if status == 'Ongoing Vehicle Maintenance':
+                    error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
+                else: 
+                    error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
+                
+                return Response({'error': error_message}, status=400)
         
         if Request.objects.filter(
             (
@@ -241,7 +243,53 @@ class RequestListCreateView(generics.ListCreateAPIView):
             'message': f"A new request has been created by {self.request.user}",
         }
     )
-        
+        if role == "vip":
+            filtered_requests = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(travel_time__gte=travel_time) &
+                    Q(return_time__lte=return_time)
+                ),
+                vehicle=vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+                status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
+            )
+
+            if filtered_requests.exists():
+                for request in filtered_requests:
+
+                    travel_date_formatted = request.travel_date.strftime('%m/%d/%Y')
+                    travel_time_formatted = request.travel_time.strftime('%I:%M %p')
+                    return_date_formatted = request.return_date.strftime('%m/%d/%Y')
+                    return_time_formatted = request.return_time.strftime('%I:%M %p')
+
+                    notification = Notification(
+                        owner=request.requester_name,
+                        subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the vip. We apologize for any inconvenience this may cause."
+                    )
+                    notification.save()
+
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{request.requester_name}", 
+                        {
+                            'type': 'recommend_notification',
+                            'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the vip. We apologize for any inconvenience this may cause."
+                        }
+                    )
+                filtered_requests.update(status='Awaiting Vehicle Alteration')
        
         return Response(RequestSerializer(new_request).data, status=201)
 
