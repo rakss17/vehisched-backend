@@ -289,7 +289,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                             'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                         }
                     )
-                filtered_requests.update(status='Awaiting Vehicle Alteration')
+                filtered_requests.update(status='Awaiting Vehicle Alteration', from_vip_alteration=True)
        
         return Response(RequestSerializer(new_request).data, status=201)
 

@@ -63,6 +63,7 @@ class Request(models.Model):
         ('Ongoing Vehicle Maintenance', 'Ongoing Vehicle Maintenance'),
         ('Driver Absence', 'Driver Absence'),
     ], null=True, blank=True)
+    from_vip_alteration = models.BooleanField(default=False)
     
 
     def __str__(self):

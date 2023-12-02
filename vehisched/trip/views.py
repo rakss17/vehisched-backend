@@ -89,6 +89,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                 await_alterate_vehicle_travel_time = await_alterate_trip.request_id.travel_time
                 await_alterate_vehicle_return_date = await_alterate_trip.request_id.return_date
                 await_alterate_vehicle_return_time = await_alterate_trip.request_id.return_time
+                await_alterate_from_vip_alteration = await_alterate_trip.request_id.from_vip_alteration
 
                 
                 unavailable_vehicles = Request.objects.filter(
@@ -130,11 +131,18 @@ class ScheduleRequesterView(generics.ListAPIView):
                         'vehicle_recommendation_capacity': vehicle.capacity,
                         'vehicle_recommendation_image': str(vehicle.image)
                     })
-      
-                if not vehicle_data_recommendation:
-                    message = 'We always strive to find the most suitable vehicle based on your preferences, but unfortunately, there are no available options at the moment.'
+
+                if await_alterate_from_vip_alteration == True:
+                    if not vehicle_data_recommendation:
+                        message = "is used by the higher official. We apologize for any inconvenience this may cause. We always strive to find the most suitable vehicle based on your preferences, but unfortunately, there are no available options at the moment."
+                    else:
+                        message = "is used by the higher official. We apologize for any inconvenience this may cause. We recommend alternative vehicles based on your preferences."
                 else:
-                    message = "We recommend alternative vehicles based on your preferences."
+                    if not vehicle_data_recommendation:
+                        message = "is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause. We always strive to find the most suitable vehicle based on your preferences, but unfortunately, there are no available options at the moment."
+                    else:
+                        message = "is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause. We recommend alternative vehicles based on your preferences."
+                
 
                 vehicle_recommendation.append({
                     'trip_id': await_alterate_trip_id,
