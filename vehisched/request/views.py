@@ -178,31 +178,31 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 
                 return Response({'error': error_message}, status=400)
         
-        if Request.objects.filter(
-            (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) |
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(travel_time__range=[travel_time, return_time])
-            ) | (
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(return_time__range=[travel_time, return_time])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date])         
-            ),
-            vehicle=vehicle,
-            status__in=['Pending', 'Awaiting Vehicle Alteration']
-        ).exclude(
-            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        ).exists():
-            error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
-            return Response({'error': error_message}, status=400)
+            if Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date])         
+                ),
+                vehicle=vehicle,
+                status__in=['Pending', 'Awaiting Vehicle Alteration']
+            ).exclude(
+                (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            ).exists():
+                error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
+                return Response({'error': error_message}, status=400)
         
         vehicle_driver_status = Vehicle_Driver_Status.objects.create(
             driver_id=None,
@@ -278,7 +278,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                     notification = Notification(
                         owner=request.requester_name,
-                        subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the vip. We apologize for any inconvenience this may cause."
+                        subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                     )
                     notification.save()
 
@@ -286,7 +286,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                         f"user_{request.requester_name}", 
                         {
                             'type': 'recommend_notification',
-                            'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the vip. We apologize for any inconvenience this may cause."
+                            'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                         }
                     )
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
