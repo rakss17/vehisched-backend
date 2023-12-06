@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Request, CSM, Question, Answer
+from .models import Request, Question, Response
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -98,29 +98,20 @@ class QuestionSerializer(serializers.ModelSerializer):
 #            Answer.objects.create(question=question, **answer_data)
 #        return question
 
-class AnswerSerializer(serializers.ModelSerializer):
+class ResponseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Answer
+        model = Response
         fields = ['content']
 
-class QuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True)
 
-    class Meta:
-        model = Question
-        fields = ['question_number', 'content', 'answers']
 
 class Question2Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['question_number', 'content', ]
+        fields = ['question_number', 'question', ]
 
-class CSMSerializer(serializers.ModelSerializer):
 
-    class Meta:
-        model = CSM
-        fields = ['request','client_type', 'region_of_residence', 'service_availed', 'email_address', 'suggestions', 'created_at', 'question']
 
     # def create(self, validated_data):
     #     questions_data = validated_data.pop('question')

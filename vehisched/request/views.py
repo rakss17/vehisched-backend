@@ -1,9 +1,9 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, CSM, Question, Answer
+from .models import Request, Type, Vehicle_Driver_Status, Question, Response
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, Question2Serializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -287,21 +287,21 @@ class RequestListCreateView(generics.ListCreateAPIView):
        
         return Response(RequestSerializer(new_request).data, status=201)
 
-class CSMListCreateView(generics.ListCreateAPIView):
-    serializer_class = CSMSerializer
+# class CSMListCreateView(generics.ListCreateAPIView):
+#     serializer_class = CSMSerializer
 
-    def get_queryset(self):
-        request_id = self.kwargs['request_id']
-        return CSM.objects.filter(request__request_id=request_id)
+#     def get_queryset(self):
+#         request_id = self.kwargs['request_id']
+#         return CSM.objects.filter(request__request_id=request_id)
 
-    def perform_create(self, serializer):
-        request_id = self.kwargs['request_id']
-        request = Request.objects.get(request_id=request_id)
-        csm = serializer.save(request=request)
+#     def perform_create(self, serializer):
+#         request_id = self.kwargs['request_id']
+#         request = Request.objects.get(request_id=request_id)
+#         csm = serializer.save(request=request)
 
-        for question_data in self.request.data['questions']:
-            question = Question.objects.get(question_number=question_data['question_number'])
-            Answer.objects.create(question=question, content=question_data['answers'])
+#         for question_data in self.request.data['questions']:
+#             question = Question.objects.get(question_number=question_data['question_number'])
+#             Answer.objects.create(question=question, content=question_data['answers'])
 
 
 

@@ -70,29 +70,22 @@ class Request(models.Model):
         return self.purpose
 
 
-
-
 class Question(models.Model):
     question_number = models.CharField(max_length=100, primary_key=True, default=None)
-    content = models.TextField(null=True, blank=True)
+    question = models.TextField(null=True, blank=True)
 
-class CSM(models.Model):
+    def __str__(self):
+        return self.question
+
+
+class Response(models.Model):
     request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, blank=True)
-    client_type = models.CharField(max_length=244, null=True, blank=True)
-    region_of_residence = models.CharField(max_length=244, null=True, blank=True)
-    service_availed = models.CharField(max_length=244, null=True, blank=True)
-    email_address = models.CharField(max_length=244, null=True, blank=True)
+    question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     suggestions = models.TextField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
+    response = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return self.client_type
+        return self.response
+    
 
-
-class Answer(models.Model):
-    question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
-    content = models.TextField(null=True, blank=True)
-
-    def __str__(self):
-        return self.content
+    
