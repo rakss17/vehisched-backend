@@ -151,6 +151,14 @@ class DriverListView(generics.ListAPIView):
         queryset = User.objects.filter(role=driver_role)
         return queryset
     
+class RequesterListView(generics.ListAPIView):
+    serializer_class = FetchedUserSerializer
+
+    def get_queryset(self):
+        requester_role = Role.objects.get(role_name='requester')
+        queryset = User.objects.filter(role=requester_role)
+        return queryset
+    
 
 class OfficeListCreateView(generics.ListCreateAPIView):
     queryset = Office.objects.all()

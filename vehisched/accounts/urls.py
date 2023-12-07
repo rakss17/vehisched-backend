@@ -14,6 +14,7 @@ urlpatterns = [
     path('me/', views.UserProfileView.as_view(), name='user-profile'),
     path('delete/<int:pk>/', views.UserDeleteView.as_view(), name='user-delete'),
     path('drivers/', views.DriverListView.as_view(), name='drivers'),
+    path('requesters/', views.RequesterListView.as_view(), name='requesters'),
     path('toggle_activation/<int:pk>/', views.toggle_user_activation, name='toggle_user_activation'),
     path('create-list-office/', views.OfficeListCreateView.as_view(), name='create-list-office')
 ]
