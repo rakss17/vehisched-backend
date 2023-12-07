@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Request, Question, Response
+from .models import Request, Question, Answer
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -98,9 +98,9 @@ class QuestionSerializer(serializers.ModelSerializer):
 #            Answer.objects.create(question=question, **answer_data)
 #        return question
 
-class ResponseSerializer(serializers.ModelSerializer):
+class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Response
+        model = Answer
         fields = ['content']
 
 

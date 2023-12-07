@@ -78,14 +78,14 @@ class Question(models.Model):
         return self.question
 
 
-class Response(models.Model):
+class Answer(models.Model):
     request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, blank=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
     suggestions = models.TextField(null=True, blank=True)
-    response = models.TextField(null=True, blank=True)
+    answer = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return self.response
+        return self.answer
     
 
     

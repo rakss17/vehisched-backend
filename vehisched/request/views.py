@@ -1,6 +1,6 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, Question, Response
+from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
 from trip.models import Trip
 from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer
