@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Request, Question, Answer
+from vehicle.models import Vehicle
 
 
 class RequestSerializer(serializers.ModelSerializer):
@@ -38,6 +39,22 @@ class RequestSerializer(serializers.ModelSerializer):
         fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
                   'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
                   'driver_mobile_number','distance', 'vehicle_driver_status']
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.purpose is None and instance.vehicle is not None:
+            vehicle = Vehicle.objects.get(plate_number=instance.vehicle.plate_number)
+            representation['vehicle_details'] = {
+                'plate_number': vehicle.plate_number,
+                'model': vehicle.model,
+                'type': vehicle.type,
+                'capacity': vehicle.capacity,
+                'is_vip': vehicle.is_vip,
+                'image': vehicle.image.url if vehicle.image else None,
+                'merge_trip': True
+
+                # add other fields as needed
+            }
+        return representation
 
 class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     requester_full_name = serializers.SerializerMethodField()

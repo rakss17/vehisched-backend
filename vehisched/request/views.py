@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, mixins
 from rest_framework.response import Response
 from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
 from trip.models import Trip
@@ -105,7 +105,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Request.objects.filter(requester_name=user)
+        if Request.objects.filter(purpose=None, requester_name=user):
+            queryset = Request.objects.filter(purpose=None, requester_name=user)
+        if Request.objects.filter(requester_name=user):
+            queryset = Request.objects.filter(requester_name=user)
 
         Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
@@ -139,8 +142,9 @@ class RequestListCreateView(generics.ListCreateAPIView):
         return_time = request.data['return_time']
         type = request.data['type']
         role = request.data['role']
+        merge_trip = request.data['merge_trip']
         
-        if not role == 'vip':
+        if not role == 'vip' and not merge_trip:
 
             matching_requests_approved_maintenance = Request.objects.filter(
                 (
@@ -284,6 +288,33 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 'message': f"A new request has been created by {self.request.user}",
             }
             )
+        if merge_trip and not role == 'vip':
+            requester = User.objects.get(id=request.data['requester_name'])
+            vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                driver_id=None,
+                plate_number=vehicle,
+                status='Reserved - Assigned'
+            )
+            
+            new_request = Request.objects.create(
+                requester_name=requester,
+                travel_date=travel_date,
+                travel_time=travel_time,
+                return_date=return_date,
+                return_time=return_time,
+                destination=request.data['destination'],
+                office=None,
+                number_of_passenger=request.data['number_of_passenger'],
+                passenger_name=None,
+                purpose=None,
+                status= 'Pending',
+                vehicle= vehicle,
+                type = Type.objects.get(name=type),
+                distance = request.data['distance'],
+            )
+
+            new_request.vehicle_driver_status_id = vehicle_driver_status
+            new_request.save()
        
         return Response(RequestSerializer(new_request).data, status=201)
 
@@ -875,3 +906,9 @@ class RejectRequestView(generics.UpdateAPIView):
         notification.save()
 
         return Response({'message': 'Success'})
+
+
+class MergeTripView(generics.RetrieveUpdateAPIView):
+    serializer_class = RequestSerializer
+
+    
