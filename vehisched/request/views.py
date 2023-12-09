@@ -908,7 +908,28 @@ class RejectRequestView(generics.UpdateAPIView):
         return Response({'message': 'Success'})
 
 
-class MergeTripView(generics.RetrieveUpdateAPIView):
+class MergeTripView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
     serializer_class = RequestSerializer
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        passenger_name = request.data.get('passenger_name', [])
+        number_of_passenger = request.data.get('number_of_passenger')
+        purpose = request.data.get('purpose')
+
+        try:
+            passenger_name = json.loads(passenger_name)
+        except json.JSONDecodeError:
+            return Response({'passenger_name': ['Invalid JSON data.']}, status=400)
+        
+        instance.passenger_name = passenger_name
+        instance.number_of_passenger = number_of_passenger
+        instance.purpose = purpose
+        instance.save()
+        
+        return Response(status=200)
+
+
 
     

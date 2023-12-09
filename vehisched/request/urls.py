@@ -19,4 +19,6 @@ urlpatterns = [
         name='reject-request'),
     # path('csm/<int:request_id>/', views.CSMListCreateView.as_view(), name='csm'),
     path('questions/', views.QuestionList.as_view(), name='question'),
+    path('submit-trip-merge/<int:pk>/', views.MergeTripView.as_view(),
+        name='submit-trip-merge'),
 ]
