@@ -140,7 +140,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         travel_time = request.data['travel_time']
         return_date = request.data['return_date']
         return_time = request.data['return_time']
-        type = request.data['type']
+        typee = request.data['type']
         role = request.data['role']
         merge_trip = request.data['merge_trip']
         
@@ -227,7 +227,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 purpose=request.data['purpose'],
                 status= 'Pending',
                 vehicle= vehicle,
-                type = Type.objects.get(name=type),
+                type = Type.objects.get(name=typee),
                 distance = request.data['distance'],
             )
 
@@ -267,7 +267,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 purpose=request.data['purpose'],
                 status= 'Pending',
                 vehicle= vehicle,
-                type = Type.objects.get(name=type),
+                type = Type.objects.get(name=typee),
                 distance = request.data['distance'],
                 from_vip_alteration = True
             )
@@ -288,6 +288,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 'message': f"A new request has been created by {self.request.user}",
             }
             )
+
         if merge_trip and not role == 'vip':
             requester = User.objects.get(id=request.data['requester_name'])
             vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -309,7 +310,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 purpose=None,
                 status= 'Pending',
                 vehicle= vehicle,
-                type = Type.objects.get(name=type),
+                type = Type.objects.get(name=typee),
                 distance = request.data['distance'],
             )
 
