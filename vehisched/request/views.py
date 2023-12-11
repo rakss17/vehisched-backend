@@ -143,6 +143,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         typee = request.data['type']
         role = request.data['role']
         merge_trip = request.data['merge_trip']
+        print("dwdw", merge_trip)
         
         if not role == 'vip' and not merge_trip:
 
@@ -247,7 +248,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 'message': f"A new request has been created by {self.request.user}",
             }
             )
-        if role == "vip":
+        if role == "vip" and not merge_trip:
             vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                 driver_id=None,
                 plate_number=vehicle,
