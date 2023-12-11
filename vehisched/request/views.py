@@ -237,7 +237,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
             notification = Notification(
                 owner=self.request.user,
-                subject=f"Request {new_request.request_id} has been created",
+                subject=f"A new request has been created by {self.request.user}",
             )
             notification.save()
 
@@ -278,7 +278,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
             notification = Notification(
                 owner=self.request.user,
-                subject=f"Request {new_request.request_id} has been created",
+                subject=f"A new request has been submitted by {self.request.user}",
             )
             notification.save()
 
@@ -286,7 +286,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
             'notifications', 
             {
                 'type': 'notify.request_created',
-                'message': f"A new request has been created by {self.request.user}",
+                'message': f"A new request has been submitted by {self.request.user}",
             }
             )
 
@@ -440,19 +440,20 @@ class RequestApprovedView(generics.UpdateAPIView):
                         }
                     )
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
-            
+        travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+        travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
 
         async_to_sync(channel_layer.group_send)(
             f"user_{instance.requester_name}", 
             {
                 'type': 'approve_notification',
-                'message': f"Request {instance.request_id} has been approved.",
+                'message': f"Your request to {instance.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",
             }
         )
 
         notification = Notification(
             owner=instance.requester_name,  
-            subject=f"Request {instance.request_id} has been approved",  
+            subject=f"Your request to {instance.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
         )
         notification.save()
 

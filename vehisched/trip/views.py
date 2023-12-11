@@ -484,7 +484,7 @@ class TripScannedView(generics.UpdateAPIView):
             for user in office_staff_users:
                 notification = Notification(
                     owner=user,
-                    subject="A travel is on the way",
+                    subject=f"{instance.requester_name} is on the way to {instance.destination}",
                 )
                 notification.save()
 
@@ -492,7 +492,7 @@ class TripScannedView(generics.UpdateAPIView):
                 'notifications', 
                 {
                     'type': 'notify.request_ontheway',
-                    'message': "A travel is on the way",
+                    'message': f"{instance.requester_name} is on the way to {instance.destination}",
                 }
             )
             type = 'Authorized'
@@ -508,7 +508,7 @@ class TripScannedView(generics.UpdateAPIView):
             for user in office_staff_users:
                 notification = Notification(
                     owner=user,
-                    subject="A travel is completed",
+                    subject=f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
                 )
                 notification.save()
 
@@ -516,7 +516,7 @@ class TripScannedView(generics.UpdateAPIView):
                 'notifications', 
                 {
                     'type': 'notify.request_completed',
-                    'message': "A travel is completed",
+                    'message': f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
                 }
             )
 
