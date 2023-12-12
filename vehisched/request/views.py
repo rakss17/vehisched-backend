@@ -442,18 +442,19 @@ class RequestApprovedView(generics.UpdateAPIView):
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
         travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
         travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        destination = instance.destination.split(',', 1)[0]
 
         async_to_sync(channel_layer.group_send)(
             f"user_{instance.requester_name}", 
             {
                 'type': 'approve_notification',
-                'message': f"Your request to {instance.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",
+                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",
             }
         )
 
         notification = Notification(
             owner=instance.requester_name,  
-            subject=f"Your request to {instance.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
+            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
         )
         notification.save()
 
@@ -524,6 +525,8 @@ class RequestCancelView(generics.UpdateAPIView):
         channel_layer = get_channel_layer()
         office_staff_role = Role.objects.get(role_name='office staff')     
         office_staff_users = User.objects.filter(role=office_staff_role)
+        is_from_office_staff = request.data.get('isFromOfficeStaff')
+        reason = request.data.get('reason')
 
         if instance.status == 'Canceled':
             return Response({'message': 'Request is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -536,21 +539,39 @@ class RequestCancelView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        for user in office_staff_users:
-        
-            notification = Notification(
-                owner=user,
-                subject=f"A request has been canceled by {self.request.user}",
-            )
-            notification.save()
+        if not is_from_office_staff:
 
-        async_to_sync(channel_layer.group_send)(
-        'notifications', 
-        {
-            'type': 'notify.request_canceled',
-            'message': f"A request has been canceled by {self.request.user}",
-        }
-    )
+            for user in office_staff_users:
+            
+                notification = Notification(
+                    owner=user,
+                    subject=f"A request has been canceled by {self.request.user}",
+                )
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_canceled',
+                    'message': f"A request has been canceled by {self.request.user}",
+                }
+            )
+        if is_from_office_staff:
+            travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+            travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+            destination = instance.destination.split(',', 1)[0]
+            async_to_sync(channel_layer.group_send)(
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'reject_notification',
+                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled due to {reason}.",
+            }
+        )
+            notification = Notification(
+            owner=instance.requester_name,  
+            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled due to {reason}.",  
+        )
+            notification.save()
 
         return Response({'message': 'Request canceled successfully.'})
 
