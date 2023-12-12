@@ -915,18 +915,22 @@ class RejectRequestView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        async_to_sync(channel_layer.group_send)(
-            f"user_{instance.requester_name}", 
-            {
-                'type': 'reject_notification',
-                'message': f"Request {instance.request_id} has been rejected.",
-            }
-        )
+        reason = request.data.get('reason')
 
+        travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+        travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        destination = instance.destination.split(',', 1)[0]
+        async_to_sync(channel_layer.group_send)(
+        f"user_{instance.requester_name}", 
+        {
+            'type': 'reject_notification',
+            'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected due to {reason}.",
+        }
+    )
         notification = Notification(
-            owner=instance.requester_name,  
-            subject=f"Request {instance.request_id} has been rejected",  
-        )
+        owner=instance.requester_name,  
+        subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected due to {reason}.",  
+    )
         notification.save()
 
         return Response({'message': 'Success'})
