@@ -564,12 +564,12 @@ class RequestCancelView(generics.UpdateAPIView):
             f"user_{instance.requester_name}", 
             {
                 'type': 'reject_notification',
-                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled due to {reason}.",
+                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled. Reason: {reason}.",
             }
         )
             notification = Notification(
             owner=instance.requester_name,  
-            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled due to {reason}.",  
+            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled. Reason: {reason}.",  
         )
             notification.save()
 
@@ -924,12 +924,12 @@ class RejectRequestView(generics.UpdateAPIView):
         f"user_{instance.requester_name}", 
         {
             'type': 'reject_notification',
-            'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected due to {reason}.",
+            'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected. Reason: {reason}.",
         }
     )
         notification = Notification(
         owner=instance.requester_name,  
-        subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected due to {reason}.",  
+        subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected. Reason: {reason}.",  
     )
         notification.save()
 
