@@ -61,6 +61,8 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     driver_full_name = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
     vehicle_driver_status = serializers.SerializerMethodField()
+    departure_time_from_office = serializers.SerializerMethodField()
+    arrival_time_to_office = serializers.SerializerMethodField()
 
     def get_driver_full_name(self, obj):
         if obj.driver_name:
@@ -89,12 +91,22 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
             vehicle_driver_status = vehicle_driver_status.status
             return vehicle_driver_status
         return None
+    
+    def get_departure_time_from_office(self, obj):
+        if hasattr(obj, 'trip'):
+            return obj.trip.departure_time_from_office
+        return None
+
+    def get_arrival_time_to_office(self, obj):
+        if hasattr(obj, 'trip'):
+            return obj.trip.arrival_time_to_office
+        return None
 
     class Meta:
         model = Request
         fields = ['request_id', 'requester_full_name', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
-                  'type', 'distance', 'vehicle_driver_status']
+                  'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office']
         
 # class AnswerSerializer(serializers.ModelSerializer):
 #    class Meta:
