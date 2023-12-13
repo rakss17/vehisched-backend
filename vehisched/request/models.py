@@ -67,7 +67,7 @@ class Request(models.Model):
     
 
     def __str__(self):
-        return self.purpose
+        return self.purpose or 'No Purpose'
 
 
 class Question(models.Model):

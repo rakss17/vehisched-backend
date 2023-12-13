@@ -466,6 +466,10 @@ class RequestApprovedView(generics.UpdateAPIView):
         passenger_name = instance.passenger_name
         destination = instance.destination
         purpose = instance.purpose
+        if(instance.date_reserved):
+            formatted_datereserved = timedate.datetime.strftime(instance.date_reserved, "%m/%d/%Y, %I:%M %p")
+
+            
 
         passenger_name_list = ast.literal_eval(passenger_name)  
         passenger_names_string = ", ".join(passenger_name_list)
@@ -493,9 +497,10 @@ class RequestApprovedView(generics.UpdateAPIView):
             vehicle_plate_number +" " + vehicle_model: [900, 550],
             requester_name+", " + passenger_names_string: [900, 590],
             destination: [900, 620],
-            purpose: [600, 660]
+            purpose: [600, 660],
+            formatted_datereserved: [1800, 320]
         }
-        rect = fitz.Rect(100, 100, 200, 200)  
+        rect = fitz.Rect(2100, 100, 2400, 400)  
         page.insert_image(rect, pixmap=pixmap)
 
         for text, coordinates in text_annotations.items():
