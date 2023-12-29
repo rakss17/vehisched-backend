@@ -143,7 +143,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
         typee = request.data['type']
         role = request.data['role']
         merge_trip = request.data['merge_trip']
-        print("dwdw", merge_trip)
         
         if not role == 'vip' and not merge_trip:
 
@@ -354,7 +353,7 @@ class RequestListOfficeStaffView(generics.ListAPIView):
 
         for user in office_staff_users:
             Notification.objects.filter(owner=user).update(read_status=True)
-
+            
         return super().list(request, *args, **kwargs)
 
  

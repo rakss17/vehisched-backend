@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from .models import Request, Question, Answer
 from vehicle.models import Vehicle
-
+from django.utils.timezone import localtime
+import pytz
 
 class RequestSerializer(serializers.ModelSerializer):
     driver_full_name = serializers.SerializerMethodField()
@@ -93,14 +94,28 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
         return None
     
     def get_departure_time_from_office(self, obj):
-        if hasattr(obj, 'trip'):
-            return obj.trip.departure_time_from_office
+        if hasattr(obj, 'trip') and obj.trip.departure_time_from_office is not None:
+            departure_time = obj.trip.departure_time_from_office
+            
+            departure_time_from_office = departure_time.astimezone(pytz.timezone('Asia/Manila'))
+            return departure_time_from_office
         return None
 
     def get_arrival_time_to_office(self, obj):
-        if hasattr(obj, 'trip'):
-            return obj.trip.arrival_time_to_office
+        if hasattr(obj, 'trip') and obj.trip.arrival_time_to_office is not None:
+            arrival_time = obj.trip.arrival_time_to_office
+            
+            arrival_time_to_office = arrival_time.astimezone(pytz.timezone('Asia/Manila'))
+            return arrival_time_to_office
         return None
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        date_reserved = localtime(instance.date_reserved, pytz.timezone('UTC'))
+        representation['date_reserved'] = date_reserved.isoformat()
+
+        return representation
 
     class Meta:
         model = Request
