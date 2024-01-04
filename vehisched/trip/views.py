@@ -119,7 +119,7 @@ class ScheduleRequesterView(generics.ListAPIView):
 
                 available_vehicles = Vehicle.objects.exclude(plate_number__in=unavailable_vehicles)
 
-                filtered_vehicle_capacity = available_vehicles.filter(capacity__lte=int(await_alterate_vehicle_capacity) + 2, capacity__gte=int(await_alterate_vehicle_capacity) - 2)
+                filtered_vehicle_capacity = available_vehicles.filter(capacity__lte=await_alterate_vehicle_capacity)
                 vehicle_data_recommendation = []
 
                 for vehicle in filtered_vehicle_capacity:
@@ -251,7 +251,7 @@ class CheckVehicleAvailability(generics.ListAPIView):
         
         available_vehicles = Vehicle.objects.exclude(plate_number__in=unavailable_vehicles)
 
-        available_vehicles_capacity_filtered = available_vehicles.filter(capacity__lte=int(preferred_capacity) + 2, capacity__gte=int(preferred_capacity) - 2)
+        available_vehicles_capacity_filtered = available_vehicles.filter(capacity__lte=preferred_capacity)
 
         available_vehicles = list(available_vehicles_capacity_filtered.values())
 
