@@ -112,7 +112,7 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        date_reserved = localtime(instance.date_reserved, pytz.timezone('UTC'))
+        date_reserved = localtime(instance.date_reserved, pytz.timezone('Asia/Manila'))
         representation['date_reserved'] = date_reserved.isoformat()
 
         return representation
