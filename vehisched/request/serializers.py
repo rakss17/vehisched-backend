@@ -1,6 +1,8 @@
 from rest_framework import serializers
-from .models import Request, CSM, Question, Answer
-
+from .models import Request, Question, Answer
+from vehicle.models import Vehicle
+from django.utils.timezone import localtime
+import pytz
 
 class RequestSerializer(serializers.ModelSerializer):
     driver_full_name = serializers.SerializerMethodField()
@@ -38,12 +40,30 @@ class RequestSerializer(serializers.ModelSerializer):
         fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
                   'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
                   'driver_mobile_number','distance', 'vehicle_driver_status']
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        if instance.purpose is None and instance.vehicle is not None:
+            vehicle = Vehicle.objects.get(plate_number=instance.vehicle.plate_number)
+            representation['vehicle_details'] = {
+                'plate_number': vehicle.plate_number,
+                'model': vehicle.model,
+                'type': vehicle.type,
+                'capacity': vehicle.capacity,
+                'is_vip': vehicle.is_vip,
+                'image': vehicle.image.url if vehicle.image else None,
+                'merge_trip': True
+
+                # add other fields as needed
+            }
+        return representation
 
 class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     requester_full_name = serializers.SerializerMethodField()
     driver_full_name = serializers.SerializerMethodField()
     type = serializers.SerializerMethodField()
     vehicle_driver_status = serializers.SerializerMethodField()
+    departure_time_from_office = serializers.SerializerMethodField()
+    arrival_time_to_office = serializers.SerializerMethodField()
 
     def get_driver_full_name(self, obj):
         if obj.driver_name:
@@ -72,12 +92,36 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
             vehicle_driver_status = vehicle_driver_status.status
             return vehicle_driver_status
         return None
+    
+    def get_departure_time_from_office(self, obj):
+        if hasattr(obj, 'trip') and obj.trip.departure_time_from_office is not None:
+            departure_time = obj.trip.departure_time_from_office
+            
+            departure_time_from_office = departure_time.astimezone(pytz.timezone('Asia/Manila'))
+            return departure_time_from_office
+        return None
+
+    def get_arrival_time_to_office(self, obj):
+        if hasattr(obj, 'trip') and obj.trip.arrival_time_to_office is not None:
+            arrival_time = obj.trip.arrival_time_to_office
+            
+            arrival_time_to_office = arrival_time.astimezone(pytz.timezone('Asia/Manila'))
+            return arrival_time_to_office
+        return None
+    
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        date_reserved = localtime(instance.date_reserved, pytz.timezone('Asia/Manila'))
+        representation['date_reserved'] = date_reserved.isoformat()
+
+        return representation
 
     class Meta:
         model = Request
         fields = ['request_id', 'requester_full_name', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
-                  'type', 'distance', 'vehicle_driver_status']
+                  'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office']
         
 # class AnswerSerializer(serializers.ModelSerializer):
 #    class Meta:
@@ -103,24 +147,15 @@ class AnswerSerializer(serializers.ModelSerializer):
         model = Answer
         fields = ['content']
 
-class QuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True)
 
-    class Meta:
-        model = Question
-        fields = ['question_number', 'content', 'answers']
 
 class Question2Serializer(serializers.ModelSerializer):
 
     class Meta:
         model = Question
-        fields = ['question_number', 'content', ]
+        fields = ['question_number', 'question', ]
 
-class CSMSerializer(serializers.ModelSerializer):
 
-    class Meta:
-        model = CSM
-        fields = ['request','client_type', 'region_of_residence', 'service_availed', 'email_address', 'suggestions', 'created_at', 'question']
 
     # def create(self, validated_data):
     #     questions_data = validated_data.pop('question')

@@ -26,7 +26,7 @@ def check_travel_dates():
         if time_zone >= travel_datetime - timedelta(days=1):
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
-                subject="This is to remind you that you have a scheduled travel in 24 hours", 
+                subject=f"This is a reminder that your scheduled travel to {request_data.destination} is in 24 hours. Departure time: {request_data.travel_time}. Safe travels!", 
                 purpose=trip.id
             ).exists()
             
@@ -35,13 +35,13 @@ def check_travel_dates():
                     f"user_{request_data.requester_name}", 
                     {
                         'type': 'schedule.reminder',
-                        'message': "This is to remind you that you have a scheduled travel in 24 hours",
+                        'message': f"This is a reminder that your scheduled travel to {request_data.destination} is in 24 hours. Departure time: {request_data.travel_time}. Safe travels!",
                     }
                 )
                 
                 notification = Notification(
                     owner=request_data.requester_name,
-                    subject="This is to remind you that you have a scheduled travel in 24 hours",
+                    subject=f"This is a reminder that your scheduled travel to {request_data.destination} is in 24 hours. Departure time: {request_data.travel_time}. Safe travels!",
                     purpose=trip.id
                 )
                 notification.save()

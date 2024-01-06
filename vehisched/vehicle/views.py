@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.exceptions import PermissionDenied
 
 
 class VehicleListCreateView(generics.ListCreateAPIView):
@@ -63,3 +64,14 @@ class VehicleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
+class VehicleForVIPListView(generics.ListCreateAPIView):
+    serializer_class = VehicleSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+    def get_queryset(self):
+        user = self.request.user
+        print(user)
+        role = self.request.GET.get('role')
+        if not role == 'vip':
+            raise PermissionDenied("Only VIP users can access this view.")
+        return Vehicle.objects.filter(assigned_to=user)

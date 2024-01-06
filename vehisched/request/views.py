@@ -1,9 +1,9 @@
-from rest_framework import generics, status
+from rest_framework import generics, status, mixins
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, CSM, Question, Answer
+from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer, CSMSerializer, Question2Serializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -105,7 +105,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Request.objects.filter(requester_name=user)
+        if Request.objects.filter(purpose=None, requester_name=user):
+            queryset = Request.objects.filter(purpose=None, requester_name=user)
+        if Request.objects.filter(requester_name=user):
+            queryset = Request.objects.filter(requester_name=user)
 
         Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
@@ -137,129 +140,200 @@ class RequestListCreateView(generics.ListCreateAPIView):
         travel_time = request.data['travel_time']
         return_date = request.data['return_date']
         return_time = request.data['return_time']
-        type = request.data['type']
+        typee = request.data['type']
+        role = request.data['role']
+        merge_trip = request.data['merge_trip']
         
+        if not role == 'vip' and not merge_trip:
 
-        matching_requests_approved_maintenance = Request.objects.filter(
-            (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) |
-                Q(return_date__range=[travel_date, return_date])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(travel_time__range=[travel_time, return_time])
-            ) | (
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(return_time__range=[travel_time, return_time])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ),
-            vehicle=vehicle,
-            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
-        ).exclude(
-            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        )
+            matching_requests_approved_maintenance = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ),
+                vehicle=vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle', 'Ongoing Vehicle Maintenance'],
+            ).exclude(
+                (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            )
 
-        if matching_requests_approved_maintenance.exists():
+            if matching_requests_approved_maintenance.exists():
+                
+                status = matching_requests_approved_maintenance.first().status
+
+                if status == 'Ongoing Vehicle Maintenance':
+                    error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
+                else: 
+                    error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
+                
+                return Response({'error': error_message}, status=400)
+        
+            if Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date])         
+                ),
+                vehicle=vehicle,
+                status__in=['Pending', 'Awaiting Vehicle Alteration']
+            ).exclude(
+                (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            ).exists():
+                error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
+                return Response({'error': error_message}, status=400)
+        
+            vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                driver_id=None,
+                plate_number=vehicle,
+                status='Reserved - Assigned'
+            )
             
-            status = matching_requests_approved_maintenance.first().status
+            new_request = Request.objects.create(
+                requester_name=self.request.user,
+                travel_date=travel_date,
+                travel_time=travel_time,
+                return_date=return_date,
+                return_time=return_time,
+                destination=request.data['destination'],
+                office=request.data['office'],
+                number_of_passenger=request.data['number_of_passenger'],
+                passenger_name=passenger_name,
+                purpose=request.data['purpose'],
+                status= 'Pending',
+                vehicle= vehicle,
+                type = Type.objects.get(name=typee),
+                distance = request.data['distance'],
+            )
 
-            if status == 'Ongoing Vehicle Maintenance':
-                error_message = "Sorry to inform you that there is sudden maintenance required for this vehicle. We apologize for any inconvenience it may cause."
-            else: 
-                error_message = "Someone has already selected and reserved this vehicle for the specified date and time range prior to your request"
+            new_request.vehicle_driver_status_id = vehicle_driver_status
+            new_request.save()
+
+            notification = Notification(
+                owner=self.request.user,
+                subject=f"A new request has been created by {self.request.user}",
+            )
+            notification.save()
+
+            async_to_sync(channel_layer.group_send)(
+            'notifications', 
+            {
+                'type': 'notify.request_created',
+                'message': f"A new request has been created by {self.request.user}",
+            }
+            )
+        if role == "vip" and not merge_trip:
+            vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                driver_id=None,
+                plate_number=vehicle,
+                status='Reserved - Assigned'
+            )
             
-            return Response({'error': error_message}, status=400)
-        
-        if Request.objects.filter(
-            (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) |
-                Q(return_date__range=[travel_date, return_date]) 
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(travel_time__range=[travel_time, return_time])
-            ) | (
-                Q(return_date__range=[travel_date, return_date]) &
-                Q(return_time__range=[travel_time, return_time])
-            ) | (
-                Q(travel_date__range=[travel_date, return_date]) &
-                Q(return_date__range=[travel_date, return_date])         
-            ),
-            vehicle=vehicle,
-            status__in=['Pending', 'Awaiting Vehicle Alteration']
-        ).exclude(
-            (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-            (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-        ).exists():
-            error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
-            return Response({'error': error_message}, status=400)
-        
-        vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-            driver_id=None,
-            plate_number=vehicle,
-            status='Reserved - Assigned'
-        )
-        
-        new_request = Request.objects.create(
-            requester_name=self.request.user,
-            travel_date=travel_date,
-            travel_time=travel_time,
-            return_date=return_date,
-            return_time=return_time,
-            destination=request.data['destination'],
-            office=request.data['office'],
-            number_of_passenger=request.data['number_of_passenger'],
-            passenger_name=passenger_name,
-            purpose=request.data['purpose'],
-            status= 'Pending',
-            vehicle= vehicle,
-            type = Type.objects.get(name=type),
-            distance = request.data['distance'],
-        )
+            new_request = Request.objects.create(
+                requester_name=self.request.user,
+                travel_date=travel_date,
+                travel_time=travel_time,
+                return_date=return_date,
+                return_time=return_time,
+                destination=request.data['destination'],
+                office=request.data['office'],
+                number_of_passenger=request.data['number_of_passenger'],
+                passenger_name=passenger_name,
+                purpose=request.data['purpose'],
+                status= 'Pending',
+                vehicle= vehicle,
+                type = Type.objects.get(name=typee),
+                distance = request.data['distance'],
+                from_vip_alteration = True
+            )
 
-        new_request.vehicle_driver_status_id = vehicle_driver_status
-        new_request.save()
+            new_request.vehicle_driver_status_id = vehicle_driver_status
+            new_request.save()
 
-        notification = Notification(
-            owner=self.request.user,
-            subject=f"Request {new_request.request_id} has been created",
-        )
-        notification.save()
+            notification = Notification(
+                owner=self.request.user,
+                subject=f"A new request has been submitted by {self.request.user}",
+            )
+            notification.save()
 
-        async_to_sync(channel_layer.group_send)(
-        'notifications', 
-        {
-            'type': 'notify.request_created',
-            'message': f"A new request has been created by {self.request.user}",
-        }
-    )
-        
+            async_to_sync(channel_layer.group_send)(
+            'notifications', 
+            {
+                'type': 'notify.request_created',
+                'message': f"A new request has been submitted by {self.request.user}",
+            }
+            )
+
+        if merge_trip and not role == 'vip':
+            requester = User.objects.get(id=request.data['requester_name'])
+            vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                driver_id=None,
+                plate_number=vehicle,
+                status='Reserved - Assigned'
+            )
+            
+            new_request = Request.objects.create(
+                requester_name=requester,
+                travel_date=travel_date,
+                travel_time=travel_time,
+                return_date=return_date,
+                return_time=return_time,
+                destination=request.data['destination'],
+                office=None,
+                number_of_passenger=request.data['number_of_passenger'],
+                passenger_name=None,
+                purpose=None,
+                status= 'Pending',
+                vehicle= vehicle,
+                type = Type.objects.get(name=typee),
+                distance = request.data['distance'],
+            )
+
+            new_request.vehicle_driver_status_id = vehicle_driver_status
+            new_request.save()
        
         return Response(RequestSerializer(new_request).data, status=201)
 
-class CSMListCreateView(generics.ListCreateAPIView):
-    serializer_class = CSMSerializer
+# class CSMListCreateView(generics.ListCreateAPIView):
+#     serializer_class = CSMSerializer
 
-    def get_queryset(self):
-        request_id = self.kwargs['request_id']
-        return CSM.objects.filter(request__request_id=request_id)
+#     def get_queryset(self):
+#         request_id = self.kwargs['request_id']
+#         return CSM.objects.filter(request__request_id=request_id)
 
-    def perform_create(self, serializer):
-        request_id = self.kwargs['request_id']
-        request = Request.objects.get(request_id=request_id)
-        csm = serializer.save(request=request)
+#     def perform_create(self, serializer):
+#         request_id = self.kwargs['request_id']
+#         request = Request.objects.get(request_id=request_id)
+#         csm = serializer.save(request=request)
 
-        for question_data in self.request.data['questions']:
-            question = Question.objects.get(question_number=question_data['question_number'])
-            Answer.objects.create(question=question, content=question_data['answers'])
+#         for question_data in self.request.data['questions']:
+#             question = Question.objects.get(question_number=question_data['question_number'])
+#             Answer.objects.create(question=question, content=question_data['answers'])
 
 
 
@@ -279,7 +353,7 @@ class RequestListOfficeStaffView(generics.ListAPIView):
 
         for user in office_staff_users:
             Notification.objects.filter(owner=user).update(read_status=True)
-
+            
         return super().list(request, *args, **kwargs)
 
  
@@ -302,6 +376,13 @@ class RequestApprovedView(generics.UpdateAPIView):
         instance.driver_name = driver
         instance.save()
 
+        travel_date = instance.travel_date
+        travel_time = instance.travel_time
+        return_date = instance.return_date
+        return_time = instance.return_time
+        vehicle = instance.vehicle
+        from_vip_alteration = instance.from_vip_alteration
+
         existing_vehicle_driver_status = instance.vehicle_driver_status_id
         existing_vehicle_driver_status.driver_id = driver
         existing_vehicle_driver_status.save()
@@ -311,17 +392,68 @@ class RequestApprovedView(generics.UpdateAPIView):
         )
         trip.save()
 
+        if from_vip_alteration:
+            filtered_requests = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(travel_time__gte=travel_time) &
+                    Q(return_time__lte=return_time)
+                ),
+                vehicle=vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+                status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
+            ).exclude(request_id=instance.request_id)
+
+            if filtered_requests.exists():
+                for requestt in filtered_requests:
+
+                    travel_date_formatted = requestt.travel_date.strftime('%m/%d/%Y')
+                    travel_time_formatted = requestt.travel_time.strftime('%I:%M %p')
+                    return_date_formatted = requestt.return_date.strftime('%m/%d/%Y')
+                    return_time_formatted = requestt.return_time.strftime('%I:%M %p')
+
+                    notification = Notification(
+                        owner=requestt.requester_name,
+                        subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
+                    )
+                    notification.save()
+
+                    async_to_sync(channel_layer.group_send)(
+                        f"user_{requestt.requester_name}", 
+                        {
+                            'type': 'recommend_notification',
+                            'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
+                        }
+                    )
+                filtered_requests.update(status='Awaiting Vehicle Alteration')
+        travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+        travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        destination = instance.destination.split(',', 1)[0]
+
         async_to_sync(channel_layer.group_send)(
             f"user_{instance.requester_name}", 
             {
                 'type': 'approve_notification',
-                'message': f"Request {instance.request_id} has been approved.",
+                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",
             }
         )
 
         notification = Notification(
             owner=instance.requester_name,  
-            subject=f"Request {instance.request_id} has been approved",  
+            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
         )
         notification.save()
 
@@ -333,6 +465,10 @@ class RequestApprovedView(generics.UpdateAPIView):
         passenger_name = instance.passenger_name
         destination = instance.destination
         purpose = instance.purpose
+        if(instance.date_reserved):
+            formatted_datereserved = timedate.datetime.strftime(instance.date_reserved, "%m/%d/%Y, %I:%M %p")
+
+            
 
         passenger_name_list = ast.literal_eval(passenger_name)  
         passenger_names_string = ", ".join(passenger_name_list)
@@ -360,9 +496,10 @@ class RequestApprovedView(generics.UpdateAPIView):
             vehicle_plate_number +" " + vehicle_model: [900, 550],
             requester_name+", " + passenger_names_string: [900, 590],
             destination: [900, 620],
-            purpose: [600, 660]
+            purpose: [600, 660],
+            formatted_datereserved: [1800, 320]
         }
-        rect = fitz.Rect(100, 100, 200, 200)  
+        rect = fitz.Rect(2100, 100, 2400, 400)  
         page.insert_image(rect, pixmap=pixmap)
 
         for text, coordinates in text_annotations.items():
@@ -392,6 +529,8 @@ class RequestCancelView(generics.UpdateAPIView):
         channel_layer = get_channel_layer()
         office_staff_role = Role.objects.get(role_name='office staff')     
         office_staff_users = User.objects.filter(role=office_staff_role)
+        is_from_office_staff = request.data.get('isFromOfficeStaff')
+        reason = request.data.get('reason')
 
         if instance.status == 'Canceled':
             return Response({'message': 'Request is already canceled.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -404,21 +543,39 @@ class RequestCancelView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        for user in office_staff_users:
-        
-            notification = Notification(
-                owner=user,
-                subject=f"A request has been canceled by {self.request.user}",
-            )
-            notification.save()
+        if not is_from_office_staff:
 
-        async_to_sync(channel_layer.group_send)(
-        'notifications', 
-        {
-            'type': 'notify.request_canceled',
-            'message': f"A request has been canceled by {self.request.user}",
-        }
-    )
+            for user in office_staff_users:
+            
+                notification = Notification(
+                    owner=user,
+                    subject=f"A request has been canceled by {self.request.user}",
+                )
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_canceled',
+                    'message': f"A request has been canceled by {self.request.user}",
+                }
+            )
+        if is_from_office_staff:
+            travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+            travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+            destination = instance.destination.split(',', 1)[0]
+            async_to_sync(channel_layer.group_send)(
+            f"user_{instance.requester_name}", 
+            {
+                'type': 'reject_notification',
+                'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled. Reason: {reason}.",
+            }
+        )
+            notification = Notification(
+            owner=instance.requester_name,  
+            subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been canceled. Reason: {reason}.",  
+        )
+            notification.save()
 
         return Response({'message': 'Request canceled successfully.'})
 
@@ -762,18 +919,49 @@ class RejectRequestView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        async_to_sync(channel_layer.group_send)(
-            f"user_{instance.requester_name}", 
-            {
-                'type': 'reject_notification',
-                'message': f"Request {instance.request_id} has been rejected.",
-            }
-        )
+        reason = request.data.get('reason')
 
+        travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
+        travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        destination = instance.destination.split(',', 1)[0]
+        async_to_sync(channel_layer.group_send)(
+        f"user_{instance.requester_name}", 
+        {
+            'type': 'reject_notification',
+            'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected. Reason: {reason}.",
+        }
+    )
         notification = Notification(
-            owner=instance.requester_name,  
-            subject=f"Request {instance.request_id} has been rejected",  
-        )
+        owner=instance.requester_name,  
+        subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been rejected. Reason: {reason}.",  
+    )
         notification.save()
 
         return Response({'message': 'Success'})
+
+
+class MergeTripView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        passenger_name = request.data.get('passenger_name', [])
+        number_of_passenger = request.data.get('number_of_passenger')
+        purpose = request.data.get('purpose')
+
+        try:
+            passenger_name = json.loads(passenger_name)
+        except json.JSONDecodeError:
+            return Response({'passenger_name': ['Invalid JSON data.']}, status=400)
+        
+        instance.passenger_name = passenger_name
+        instance.number_of_passenger = number_of_passenger
+        instance.purpose = purpose
+        instance.save()
+        
+        return Response(status=200)
+
+
+
+    
