@@ -11,7 +11,12 @@ class NullableSlugRelatedField(serializers.SlugRelatedField):
 
 
 class VehicleSerializer(serializers.ModelSerializer):
-    assigned_to = NullableSlugRelatedField(
+    vip_assigned_to = NullableSlugRelatedField(
+        slug_field='username',
+        queryset=User.objects.all(),
+        allow_null=True
+    )
+    driver_assigned_to = serializers.SlugRelatedField(
         slug_field='username',
         queryset=User.objects.all(),
         allow_null=True
@@ -23,6 +28,6 @@ class VehicleSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         if 'is_vip' in validated_data and not validated_data['is_vip']:
-            validated_data['assigned_to'] = None
+            validated_data['vip_assigned_to'] = None
         return super().update(instance, validated_data)
 

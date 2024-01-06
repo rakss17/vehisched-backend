@@ -11,8 +11,10 @@ class Vehicle(models.Model):
     is_vip = models.BooleanField(default=False)
     image = models.ImageField(
         upload_to='vehicle_images/', null=True, blank=True)
-    assigned_to = models.ForeignKey(
-        User, on_delete=models.CASCADE, null=True, blank=True)
+    vip_assigned_to = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name='for_vip')
+    driver_assigned_to = models.ForeignKey(
+        User, on_delete=models.CASCADE, null=True, blank=True, related_name='for_driver')
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
     def __str__(self):
