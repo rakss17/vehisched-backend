@@ -74,4 +74,4 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
         role = self.request.GET.get('role')
         if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
-        return Vehicle.objects.filter(assigned_to=user)
+        return Vehicle.objects.filter(vip_assigned_to=user)

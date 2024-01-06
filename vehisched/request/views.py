@@ -132,6 +132,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
             )
             notification.save()
 
+        driver_name = request.data['driver_name']
+
+        driver = User.objects.get(username=driver_name)
+
         plate_number = request.data.get('vehicle')
 
         vehicle = Vehicle.objects.get(plate_number=plate_number)
@@ -214,22 +218,68 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 status='Reserved - Assigned'
             )
             
-            new_request = Request.objects.create(
-                requester_name=self.request.user,
-                travel_date=travel_date,
-                travel_time=travel_time,
-                return_date=return_date,
-                return_time=return_time,
-                destination=request.data['destination'],
-                office=request.data['office'],
-                number_of_passenger=request.data['number_of_passenger'],
-                passenger_name=passenger_name,
-                purpose=request.data['purpose'],
-                status= 'Pending',
-                vehicle= vehicle,
-                type = Type.objects.get(name=typee),
-                distance = request.data['distance'],
+            unavailable_driver = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) |
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(travel_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(return_date__range=[travel_date, travel_date]) &
+                    Q(return_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ),
+                driver_name=driver,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Driver Absence']
+            ).exclude(
+                (Q(travel_date=travel_date) & Q(travel_time__gte=travel_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
             )
+            if unavailable_driver.exists():
+                new_request = Request.objects.create(
+                    requester_name=self.request.user,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = True,
+                    driver_name = None
+                )
+            else: 
+                new_request = Request.objects.create(
+                    requester_name=self.request.user,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = True,
+                    driver_name = driver
+                )
 
             new_request.vehicle_driver_status_id = vehicle_driver_status
             new_request.save()
@@ -253,25 +303,68 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 plate_number=vehicle,
                 status='Reserved - Assigned'
             )
-            
-            new_request = Request.objects.create(
-                requester_name=self.request.user,
-                travel_date=travel_date,
-                travel_time=travel_time,
-                return_date=return_date,
-                return_time=return_time,
-                destination=request.data['destination'],
-                office=request.data['office'],
-                number_of_passenger=request.data['number_of_passenger'],
-                passenger_name=passenger_name,
-                purpose=request.data['purpose'],
-                status= 'Pending',
-                vehicle= vehicle,
-                type = Type.objects.get(name=typee),
-                distance = request.data['distance'],
-                from_vip_alteration = True
+            unavailable_driver = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) |
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(travel_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(return_date__range=[travel_date, travel_date]) &
+                    Q(return_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ),
+                driver_name=driver,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Driver Absence']
+            ).exclude(
+                (Q(travel_date=travel_date) & Q(travel_time__gte=travel_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
             )
-
+            if unavailable_driver.exists():
+                new_request = Request.objects.create(
+                    requester_name=self.request.user,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = True,
+                    driver_name = None
+                )
+            else: 
+                new_request = Request.objects.create(
+                    requester_name=self.request.user,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = True,
+                    driver_name = driver
+                )
             new_request.vehicle_driver_status_id = vehicle_driver_status
             new_request.save()
 
