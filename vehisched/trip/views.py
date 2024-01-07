@@ -6,6 +6,7 @@ from accounts.models import Role
 from accounts.models import User
 from request.models import Request, Vehicle_Driver_Status
 from vehicle.models import Vehicle
+from vehicle.serializers import VehicleSerializer
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -253,9 +254,10 @@ class CheckVehicleAvailability(generics.ListAPIView):
 
         available_vehicles_capacity_filtered = available_vehicles.filter(capacity__lte=preferred_capacity)
 
-        available_vehicles = list(available_vehicles_capacity_filtered.values())
+        serializer = VehicleSerializer(available_vehicles_capacity_filtered, many=True)
+        serialized_data = serializer.data
 
-        return JsonResponse(available_vehicles, safe=False)
+        return Response(serialized_data)
 
     
 class CheckDriverAvailability(generics.ListAPIView):
