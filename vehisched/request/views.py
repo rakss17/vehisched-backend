@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
 from trip.models import Trip
 from accounts.models import Role, User
-from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer
+from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer, AnswerSerializer
 from vehicle.models import Vehicle
 from notification.models import Notification
 from channels.layers import get_channel_layer
@@ -435,6 +435,39 @@ class QuestionList(generics.ListAPIView):
        questions = Question.objects.all()
        serializer = Question2Serializer(questions, many=True)
        return Response(serializer.data)
+   
+class AnswerListCreateView(generics.ListCreateAPIView):
+    serializer_class = AnswerSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+  
+        queryset = Request.objects.filter(requester_name=user)
+
+        Notification.objects.filter(owner=user).update(read_status=True)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        answers_data = request.data['qaPairs']
+        suggestions = request.data['suggestions'] 
+
+        for answer_data in answers_data:
+            question = answer_data['question']
+            answer = answer_data['answer']
+            request_id = answer_data['request']
+
+            question_obj = Question.objects.get(question_number=question)
+            request_obj = Request.objects.get(request_id=request_id)
+
+            Answer.objects.create(
+                request=request_obj,
+                question=question_obj,
+                answer=answer,
+                suggestions=suggestions # Associate the suggestions with the Answer object
+            )
+
+        return Response(status=status.HTTP_201_CREATED)
+
 
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
