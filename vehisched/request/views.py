@@ -439,12 +439,11 @@ class QuestionList(generics.ListAPIView):
 class AnswerListCreateView(generics.ListCreateAPIView):
     serializer_class = AnswerSerializer
 
-    def get_queryset(self):
-        user = self.request.user
+    def get_queryset(self, request, *args, **kwargs):
+        request_id = request.GET.get('request_id')
   
-        queryset = Request.objects.filter(requester_name=user)
+        queryset = Answer.objects.filter(request_id=request_id)
 
-        Notification.objects.filter(owner=user).update(read_status=True)
         return queryset
 
     def create(self, request, *args, **kwargs):

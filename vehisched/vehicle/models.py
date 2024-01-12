@@ -19,3 +19,15 @@ class Vehicle(models.Model):
 
     def __str__(self):
         return self.plate_number
+
+class OnProcess(models.Model):
+    vehicle = models.CharField(max_length=100, null=True, blank=True)
+    requester = models.CharField(max_length=255, null=True, blank=True)
+    travel_date = models.DateField(null=True, blank=True)
+    travel_time = models.TimeField(null=True, blank=True)
+    return_date = models.DateField(null=True, blank=True)
+    return_time = models.TimeField(null=True, blank=True)
+    on_process = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.vehicle

@@ -1,13 +1,15 @@
 from rest_framework import generics
-from .models import Vehicle
+from .models import Vehicle, OnProcess
 from .serializers import VehicleSerializer
-from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from django.utils import timezone
+from datetime import datetime
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
+from django.db.models import Q
+
+
 
 
 class VehicleListCreateView(generics.ListCreateAPIView):
@@ -75,3 +77,85 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
         if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
         return Vehicle.objects.filter(vip_assigned_to=user)
+    
+
+class CheckVehicleOnProcess(generics.ListAPIView):
+        
+    def get(self, request, *args, **kwargs):
+        preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
+        preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
+        preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
+        preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+        preferred_vehicle = self.request.GET.get('preferred_vehicle')
+        button_action = self.request.GET.get('button_action')
+        requester = self.request.GET.get('requester')
+
+        if button_action == 'select_vehicle':
+            if OnProcess.objects.filter(
+            (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__gte=preferred_start_travel_time) &
+                Q(return_time__lte=preferred_end_travel_time)
+            ),
+            vehicle=preferred_vehicle,
+            on_process=True
+        ).exclude(
+            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
+        ).exists():
+                message = "There is a requester on process. Sorry for inconvenience"
+                return Response({'message': message}, status=400)
+            else:
+                OnProcess.objects.create(travel_date=preferred_start_travel_date, travel_time=preferred_start_travel_time, 
+                                         return_date=preferred_end_travel_date, return_time=preferred_end_travel_time, requester=requester, 
+                                         vehicle=preferred_vehicle, on_process=True)
+                message ='Vacant'
+                return Response({'message': message}, status=200)
+        
+        if button_action == 'deselect_vehicle':
+            on_process_obj = OnProcess.objects.filter(
+            (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__gte=preferred_start_travel_time) &
+                Q(return_time__lte=preferred_end_travel_time)
+            ),
+            vehicle=preferred_vehicle,
+            requester=requester,
+            on_process=True
+        ).exclude(
+            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
+        )
+            if on_process_obj.exists():
+                on_process_obj.delete()
+                message ='Deselect vehicle'
+                return Response({'message': message}, status=200)
+                
+
+        

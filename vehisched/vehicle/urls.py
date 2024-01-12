@@ -8,4 +8,5 @@ urlpatterns = [
          name='vehicle-retrieve-update-destroy'),
      path('fetch-vehicle-vip/', views.VehicleForVIPListView.as_view(),
          name='fetch-vehicle-vip'),
+    path('check-vehicle-on-process/', views.CheckVehicleOnProcess.as_view(), name='check-vehicle-on-process')
 ]
