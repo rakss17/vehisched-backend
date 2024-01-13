@@ -973,37 +973,9 @@ class DriverAbsence(generics.CreateAPIView):
         )
 
         if filtered_requests.exists():
-            unavailable_drivers = Request.objects.filter(
-                    (
-                        Q(travel_date__range=[travel_date, return_date]) &
-                        Q(return_date__range=[travel_date, return_date]) 
-                    ) | (
-                        Q(travel_date__range=[travel_date, return_date]) |
-                        Q(return_date__range=[travel_date, return_date]) 
-                    ) | (
-                        Q(travel_date__range=[travel_date, return_date]) &
-                        Q(travel_time__range=[travel_time, return_time])
-                    ) | (
-                        Q(return_date__range=[travel_date, return_date]) &
-                        Q(return_time__range=[travel_time, return_time])
-                    ) | (
-                        Q(travel_date__range=[travel_date, return_date]) &
-                        Q(return_date__range=[travel_date, return_date])         
-                    ),
-                    vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance', 'Driver Absence'],              
-                ).exclude(
-                    (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
-                    (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
-                ).exclude(
-                    driver_name__username=None
-                ).values_list('driver_name__username', flat=True)
             
-            available_drivers = User.objects.filter(role__role_name='driver').exclude(username__in=unavailable_drivers)
-
-            first_available_driver = available_drivers.first()
     
-            filtered_requests.update(driver_name=first_available_driver)
+            filtered_requests.update(driver_name=None)
         
         return Response(RequestSerializer(new_request).data, status=201)
     
