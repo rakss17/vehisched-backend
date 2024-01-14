@@ -90,32 +90,32 @@ class CheckVehicleOnProcess(generics.ListAPIView):
         button_action = self.request.GET.get('button_action')
         requester = self.request.GET.get('requester')
 
+        print(button_action)
+
         if button_action == 'select_vehicle':
             if OnProcess.objects.filter(
-            (
-                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-            ) | (
-                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
-                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-            ) | (
-                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-                Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
-            ) | (
-                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-                Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
-            ) | (
-                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-                Q(travel_time__gte=preferred_start_travel_time) &
-                Q(return_time__lte=preferred_end_travel_time)
-            ),
-            vehicle=preferred_vehicle,
-            on_process=True
-        ).exclude(
-            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
-            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
-        ).exists():
+                (
+                    Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                    Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+                ) | (
+                    Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                    Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+                ) | (
+                    Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                    Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+                ) | (
+                    Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                    Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+                ) | (
+                    Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                    Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                    Q(travel_time__gte=preferred_start_travel_time) &
+                    Q(return_time__lte=preferred_end_travel_time)
+                ),
+                vehicle=preferred_vehicle,
+                on_process=True).exclude(
+                (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
+                (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))).exists():
                 message = "There is a requester on process. Sorry for inconvenience"
                 return Response({'message': message}, status=400)
             else:
@@ -124,8 +124,7 @@ class CheckVehicleOnProcess(generics.ListAPIView):
                                          vehicle=preferred_vehicle, on_process=True)
                 message ='Vacant'
                 return Response({'message': message}, status=200)
-        
-        if button_action == 'deselect_vehicle':
+        elif button_action == 'deselect_vehicle':
             on_process_obj = OnProcess.objects.filter(
             (
                 Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
@@ -147,15 +146,14 @@ class CheckVehicleOnProcess(generics.ListAPIView):
             ),
             vehicle=preferred_vehicle,
             requester=requester,
-            on_process=True
-        ).exclude(
+            on_process=True).exclude(
             (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
-            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
-        )
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time)))
             if on_process_obj.exists():
                 on_process_obj.delete()
                 message ='Deselect vehicle'
                 return Response({'message': message}, status=200)
+            return Response({'message': 'Success'}, status=200)
                 
 
         
