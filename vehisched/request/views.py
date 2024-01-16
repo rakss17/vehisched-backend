@@ -658,18 +658,18 @@ class RequestApprovedView(generics.UpdateAPIView):
         page = doc[0] 
 
         text_annotations = {
-            driver_name: [900, 520],
-            vehicle_plate_number +" " + vehicle_model: [900, 550],
-            requester_name+", " + passenger_names_string: [900, 590],
-            destination: [900, 620],
-            purpose: [600, 660],
-            formatted_datereserved: [1800, 320]
+            driver_name: [220, 142],
+            vehicle_plate_number +" " + vehicle_model: [220, 152],
+            requester_name+", " + passenger_names_string: [220, 160],
+            destination: [220, 170],
+            purpose: [130, 180],
+            formatted_datereserved: [450, 80]
         }
-        rect = fitz.Rect(2100, 100, 2400, 400)  
+        rect = fitz.Rect(520, 20, 570, 70)  
         page.insert_image(rect, pixmap=pixmap)
 
         for text, coordinates in text_annotations.items():
-            page.insert_text(coordinates, text, fontname="helv", fontsize=20)
+            page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
 
         doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
         doc.close()
