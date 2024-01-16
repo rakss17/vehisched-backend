@@ -129,7 +129,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         for user in office_staff_users:
             notification = Notification(
                 owner=user,
-                subject=f"A new request has been created by {self.request.user}",
+                subject=f"A new request has been submitted by {self.request.user}",
             )
             notification.save()
 
@@ -266,14 +266,14 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                 notification = Notification(
                     owner=self.request.user,
-                    subject=f"A new request has been created by {self.request.user}" )
+                    subject=f"A new request has been submitted by {self.request.user}" )
                 notification.save()
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
                 {
                     'type': 'notify.request_created',
-                    'message': f"A new request has been created by {self.request.user}",
+                    'message': f"A new request has been submitted by {self.request.user}",
                 })
                 return Response(RequestSerializer(new_request).data, status=201)
             else: 
@@ -304,14 +304,14 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                 notification = Notification(
                     owner=self.request.user,
-                    subject=f"A new request has been created by hehe{self.request.user}")
+                    subject=f"A new request has been submitted by {self.request.user}")
                 notification.save()
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
                 {
                     'type': 'notify.request_created',
-                    'message': f"A new request has been created by hee{self.request.user}",
+                    'message': f"A new request has been submitted by {self.request.user}",
                 })
             
                 return Response(RequestSerializer(new_request).data, status=201)

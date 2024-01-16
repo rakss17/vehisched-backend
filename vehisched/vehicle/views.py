@@ -1,14 +1,13 @@
 from rest_framework import generics
 from .models import Vehicle, OnProcess
-from .serializers import VehicleSerializer
-from django.utils import timezone
-from datetime import datetime
+from .serializers import VehicleSerializer, VehicleEachScheduleSerializer
+from request.views import RequestOfficeStaffSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
-
+from request.models import Request
 
 
 
@@ -156,4 +155,30 @@ class CheckVehicleOnProcess(generics.ListAPIView):
             return Response({'message': 'Success'}, status=200)
                 
 
-        
+class VehicleEachSchedule(generics.ListAPIView):
+    serializer_class = RequestOfficeStaffSerializer
+
+    def get(self, request, *args, **kwargs):
+        vehicles = Vehicle.objects.all()
+
+        requests_by_vehicle = {}
+
+        for vehicle in vehicles:
+            queryset = Request.objects.filter(
+                vehicle=vehicle, 
+                status__in=[
+                    'Approved', 
+                    'Approved - Alterate Vehicle', 
+                    'Awaiting Vehicle Alteration', 
+                    'Vehicle Maintenance'
+                ]
+            )
+            serializer = self.serializer_class(queryset, many=True)
+            vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
+            requests_by_vehicle[vehicle.plate_number] = {
+                'vehicle': vehicle_key,
+                'schedules': serializer.data
+            }
+
+        return Response(requests_by_vehicle)
+    
