@@ -9,5 +9,6 @@ urlpatterns = [
      path('fetch-vehicle-vip/', views.VehicleForVIPListView.as_view(),
          name='fetch-vehicle-vip'),
     path('check-vehicle-on-process/', views.CheckVehicleOnProcess.as_view(), name='check-vehicle-on-process'),
-    path('fetch-each-vehicle-schedule/', views.VehicleEachSchedule.as_view(), name='fetch-each-vehicle-schedule')
+    path('fetch-each-vehicle-schedule/', views.VehicleEachSchedule.as_view(), name='fetch-each-vehicle-schedule'),
+    path('heartbeat-on-process-vehicle/<int:pk>/', views.HeartbeatView.as_view(), name='heartbeat-on-process-vehicle')
 ]

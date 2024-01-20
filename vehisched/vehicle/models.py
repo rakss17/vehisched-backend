@@ -1,5 +1,6 @@
 from django.db import models
 from accounts.models import User
+from django.utils import timezone
 
 
 class Vehicle(models.Model):
@@ -28,6 +29,7 @@ class OnProcess(models.Model):
     return_date = models.DateField(null=True, blank=True)
     return_time = models.TimeField(null=True, blank=True)
     on_process = models.BooleanField(default=False)
+    last_heartbeat = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.vehicle

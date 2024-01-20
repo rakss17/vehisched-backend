@@ -8,6 +8,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from request.models import Request
+from django.utils import timezone
 
 
 
@@ -118,11 +119,11 @@ class CheckVehicleOnProcess(generics.ListAPIView):
                 message = "There is a requester on process. Sorry for inconvenience"
                 return Response({'message': message}, status=400)
             else:
-                OnProcess.objects.create(travel_date=preferred_start_travel_date, travel_time=preferred_start_travel_time, 
+                on_process_obj = OnProcess.objects.create(travel_date=preferred_start_travel_date, travel_time=preferred_start_travel_time, 
                                          return_date=preferred_end_travel_date, return_time=preferred_end_travel_time, requester=requester, 
                                          vehicle=preferred_vehicle, on_process=True)
                 message ='Vacant'
-                return Response({'message': message}, status=200)
+                return Response({'message': message, 'on_process_id': on_process_obj.id}, status=200)
         elif button_action == 'deselect_vehicle':
             on_process_obj = OnProcess.objects.filter(
             (
@@ -153,7 +154,16 @@ class CheckVehicleOnProcess(generics.ListAPIView):
                 message ='Deselect vehicle'
                 return Response({'message': message}, status=200)
             return Response({'message': 'Success'}, status=200)
-                
+        
+class HeartbeatView(generics.UpdateAPIView):
+    queryset = OnProcess.objects.all()
+    
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        instance.last_heartbeat = timezone.now()
+        instance.save()
+        return Response({'status': 'success'})         
 
 class VehicleEachSchedule(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer

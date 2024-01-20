@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from celery import shared_task
 from notification.models import Notification
+from vehicle.models import OnProcess
 from .models import Trip
 from request.models import Request
 from channels.layers import get_channel_layer
@@ -137,3 +138,12 @@ def check_travel_dates():
         #             purpose=trip.id
         #         )
         #         notification.save()
+            
+
+@shared_task
+def check_heartbeat():
+    threshold = timezone.now() - timedelta(minutes=1)
+    stale_processes = OnProcess.objects.filter(last_heartbeat__lt=threshold, on_process=True)
+    
+    for process in stale_processes:
+        process.delete()
