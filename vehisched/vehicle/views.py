@@ -90,8 +90,6 @@ class CheckVehicleOnProcess(generics.ListAPIView):
         button_action = self.request.GET.get('button_action')
         requester = self.request.GET.get('requester')
 
-        print(button_action)
-
         if button_action == 'select_vehicle':
             if OnProcess.objects.filter(
                 (
@@ -115,7 +113,7 @@ class CheckVehicleOnProcess(generics.ListAPIView):
                 vehicle=preferred_vehicle,
                 on_process=True).exclude(
                 (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
-                (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))).exists():
+                (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))).exclude(requester=requester).exists():
                 message = "There is a requester on process. Sorry for inconvenience"
                 return Response({'message': message}, status=400)
             else:
