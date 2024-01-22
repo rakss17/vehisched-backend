@@ -1099,6 +1099,19 @@ class MergeTripView(generics.UpdateAPIView):
         instance.save()
         
         return Response(status=200)
+    
+class ChangeRequestDriverView(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        new_driver = request.data.get('new_driver')
+
+        new_driver = User.objects.get(id=new_driver)
+        instance.driver_name = new_driver
+        instance.save()
+
+        return Response(status=200)
 
 
 
