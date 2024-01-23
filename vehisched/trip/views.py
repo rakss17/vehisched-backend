@@ -49,7 +49,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     driver_data = None
    
                 trip_data.append({
-                    'trip_id': current_schedule.id,
+                    'trip_id': current_schedule.trip_id,
                     'travel_date': request_data.travel_date,
                     'travel_time': request_data.travel_time,
                     'return_date': request_data.return_date,
@@ -431,7 +431,7 @@ class VehicleRecommendationAcceptance(generics.UpdateAPIView):
         # trip = Trip(
         #     # driver_name=driver,
         #     # plate_number=plate_number,
-        #     # authorized_passenger=authorized_passenger,
+        #     # authorized_passenger=authorized_passenger
         #     request_id=instance,
         # )
         # trip.save()

@@ -3,6 +3,7 @@ from request.models import Request
 
 
 class Trip(models.Model):
+    trip_id = models.IntegerField(primary_key=True, default=0)
     request_id = models.OneToOneField(
         Request, on_delete=models.CASCADE, null=True, blank=True)
     departure_time_from_office = models.DateTimeField(null=True, blank=True)

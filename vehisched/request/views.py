@@ -554,6 +554,7 @@ class RequestApprovedView(generics.UpdateAPIView):
         existing_vehicle_driver_status.save()
         
         trip = Trip(
+            trip_id=instance.request_id,
             request_id=instance,
         )
         trip.save()
