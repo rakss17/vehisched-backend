@@ -469,63 +469,68 @@ class TripScannedView(generics.UpdateAPIView):
         office_staff_role = Role.objects.get(role_name='office staff')     
         office_staff_users = User.objects.filter(role=office_staff_role)
 
+        travel_datetime = datetime.combine(instance.travel_date, instance.travel_time)
+        travel_datetime = timezone.make_aware(travel_datetime)
+
         time_zone = timezone.localtime(timezone.now())
 
         # time_zone_12hr_format = time_zone.strftime('%Y-%m-%d %I:%M %p') 
-
         type = None
-        existing_vehicle_driver_status = instance.vehicle_driver_status_id
-        if (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'Reserved - Assigned':
+        if travel_datetime > time_zone:
+            type =  'Not Yet'
+        else:    
             existing_vehicle_driver_status = instance.vehicle_driver_status_id
-            existing_vehicle_driver_status.status = 'On Trip'
-            existing_vehicle_driver_status.save()  
+            if (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'Reserved - Assigned':
+                existing_vehicle_driver_status = instance.vehicle_driver_status_id
+                existing_vehicle_driver_status.status = 'On Trip'
+                existing_vehicle_driver_status.save()  
 
-            trip.departure_time_from_office = time_zone
-            trip.save()
+                trip.departure_time_from_office = time_zone
+                trip.save()
 
-            for user in office_staff_users:
-                notification = Notification(
-                    owner=user,
-                    subject=f"{instance.requester_name} is on the way to {instance.destination}",
+                for user in office_staff_users:
+                    notification = Notification(
+                        owner=user,
+                        subject=f"{instance.requester_name} is on the way to {instance.destination}",
+                    )
+                    notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                    'notifications', 
+                    {
+                        'type': 'notify.request_ontheway',
+                        'message': f"{instance.requester_name} is on the way to {instance.destination}",
+                    }
                 )
-                notification.save()
+                type = 'Authorized'
+            elif (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'On Trip':
+                existing_vehicle_driver_status = instance.vehicle_driver_status_id
+                instance.status = 'Completed'
+                trip.arrival_time_to_office = time_zone
+                trip.save()
+                instance.save()
+                existing_vehicle_driver_status.status = 'Available'
+                existing_vehicle_driver_status.save()
 
-            async_to_sync(channel_layer.group_send)(
-                'notifications', 
-                {
-                    'type': 'notify.request_ontheway',
-                    'message': f"{instance.requester_name} is on the way to {instance.destination}",
-                }
-            )
-            type = 'Authorized'
-        elif (instance.status == 'Approved' or instance.status == 'Approved - Alterate Vehicle') and existing_vehicle_driver_status.status == 'On Trip':
-            existing_vehicle_driver_status = instance.vehicle_driver_status_id
-            instance.status = 'Completed'
-            trip.arrival_time_to_office = time_zone
-            trip.save()
-            instance.save()
-            existing_vehicle_driver_status.status = 'Available'
-            existing_vehicle_driver_status.save()
+                for user in office_staff_users:
+                    notification = Notification(
+                        owner=user,
+                        subject=f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
+                    )
+                    notification.save()
 
-            for user in office_staff_users:
-                notification = Notification(
-                    owner=user,
-                    subject=f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
+                async_to_sync(channel_layer.group_send)(
+                    'notifications', 
+                    {
+                        'type': 'notify.request_completed',
+                        'message': f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
+                    }
                 )
-                notification.save()
 
-            async_to_sync(channel_layer.group_send)(
-                'notifications', 
-                {
-                    'type': 'notify.request_completed',
-                    'message': f"The travel to {instance.destination} using {instance.vehicle} has been successfully completed.",
-                }
-            )
+                type = 'Completed'
 
-            type = 'Completed'
-
-        elif (instance.status == 'Completed') and existing_vehicle_driver_status.status == 'Available':
-            type = 'Already Completed'
+            elif (instance.status == 'Completed') and existing_vehicle_driver_status.status == 'Available':
+                type = 'Already Completed'
         
         return Response({'message': 'Request completed successfully.', 'type': type})
     
@@ -559,7 +564,7 @@ class OnTripsGateGuardView(generics.ListAPIView):
             )
 
             trip_fields = Trip.objects.filter(request_id__vehicle_driver_status_id=vehicle_driver_status).values(
-                'id',
+                'trip_id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',
@@ -618,7 +623,7 @@ class RecentLogsGateGuardView(generics.ListAPIView):
             )
 
             trip_fields = Trip.objects.filter(request_id=recent_trip).values(
-                'id',
+                'trip_id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',
@@ -676,7 +681,7 @@ class DriverOwnScheduleView(generics.ListAPIView):
             )
 
             trip_fields = Trip.objects.filter(request_id=recent_trip).values(
-                'id',
+                'trip_id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',
@@ -735,7 +740,7 @@ class DriverTripsView(generics.ListAPIView):
             )
 
             trip_fields = Trip.objects.filter(request_id=recent_trip).values(
-                'id',
+                'trip_id',
                 'departure_time_from_office',
                 'arrival_time_to_destination',
                 'departure_time_from_destination',
