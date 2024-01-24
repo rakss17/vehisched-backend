@@ -16,5 +16,6 @@ urlpatterns = [
     path('drivers/', views.DriverListView.as_view(), name='drivers'),
     path('requesters/', views.RequesterListView.as_view(), name='requesters'),
     path('toggle_activation/<int:pk>/', views.toggle_user_activation, name='toggle_user_activation'),
-    path('create-list-office/', views.OfficeListCreateView.as_view(), name='create-list-office')
+    path('create-list-office/', views.OfficeListCreateView.as_view(), name='create-list-office'),
+    path('change_password/', views.change_password, name='change_password'),
 ]
