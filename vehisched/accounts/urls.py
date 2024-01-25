@@ -18,4 +18,6 @@ urlpatterns = [
     path('toggle_activation/<int:pk>/', views.toggle_user_activation, name='toggle_user_activation'),
     path('create-list-office/', views.OfficeListCreateView.as_view(), name='create-list-office'),
     path('change_password/', views.change_password, name='change_password'),
+    path('reset_password/<uidb64>/<token>/',
+         views.reset_password_redirection, name='reset_password_redirection'),
 ]

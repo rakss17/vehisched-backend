@@ -162,7 +162,9 @@ REST_FRAMEWORK = {
 DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
+    "PASSWORD_CHANGED_EMAIL_CONFIRMATION": True,
     'ACTIVATION_URL': 'api/v1/accounts/activation/{uid}/{token}',
+    'PASSWORD_RESET_CONFIRM_URL': 'api/v1/accounts/reset_password/{uid}/{token}',
     'SERIALIZERS': {
         'user_create': 'accounts.serializers.UserSerializer',
     },
@@ -197,11 +199,6 @@ CELERY_TIMEZONE = 'Asia/Manila'
 # CELERY_TASK_ALWAYS_EAGER = False
 # CELERY_TASK_EAGER_PROPAGATES = False
 # CELERY_WORKER_REDIRECT_STDOUTS = False
-
-# EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-# EMAIL_HOST_USER = '72f28f72d261ba'
-# EMAIL_HOST_PASSWORD = '05a16ddd97b40d'
-# EMAIL_PORT = '2525'
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
 EMAIL_HOST = os.getenv('EMAIL_HOST')

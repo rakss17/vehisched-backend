@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from .serializers import ChangePasswordSerializer
 from django.contrib.auth import update_session_auth_hash
+from django.http import HttpResponseRedirect
 
 
 User = get_user_model()
@@ -196,6 +197,10 @@ def change_password(request):
                 return Response({'message': 'Password changed successfully.'}, status=status.HTTP_200_OK)
             return Response({'error': 'Invalid old password'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def reset_password_redirection(request, uidb64, token):
+    url = f'http://192.168.1.11:5173/#/ResetPassword/{uidb64}/{token}'
+    return HttpResponseRedirect(url)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
