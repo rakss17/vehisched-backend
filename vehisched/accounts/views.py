@@ -45,10 +45,10 @@ def activate_account(request, uidb64, token):
 
         send_mail(subject, message, from_email, [to_email])
         messages.success(request, 'Your account has been activated.')
-        return redirect('http://localhost:5173/#/AccountActivated')
+        return redirect(f'{settings.FRONTEND_URL}/#/AccountActivated')
     else:
         messages.error(request, 'Activation link is invalid or has expired.')
-        return redirect('http://localhost:5173/#/NotFound')
+        return redirect(f'{settings.FRONTEND_URL}/#/NotFound')
 
 
 class UserProfileView(generics.RetrieveAPIView):
@@ -199,7 +199,7 @@ def change_password(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 def reset_password_redirection(request, uidb64, token):
-    url = f'http://192.168.1.11:5173/#/ResetPassword/{uidb64}/{token}'
+    url = f'{settings.FRONTEND_URL}/#/ResetPassword/{uidb64}/{token}'
     return HttpResponseRedirect(url)
 
 @api_view(['POST'])

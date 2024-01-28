@@ -37,7 +37,7 @@ CORS_ALLOW_ALL_ORIGINS = True
 CORS_EXPOSE_HEADERS = ['Content-Disposition']
 
 BASE_URL = 'http://localhost:8000/'
-
+FRONTEND_URL = 'http://192.168.1.11:5173'
 
 # Application definition
 
