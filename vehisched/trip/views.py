@@ -70,7 +70,7 @@ class ScheduleRequesterView(generics.ListAPIView):
                     ).order_by('-request_id__travel_date').first()
 
                     if previous_trip:
-                        previous_trip_id = previous_trip.id
+                        previous_trip_id = previous_trip.trip_id
 
                     trip_data.append({
                         'previous_trip_id': previous_trip_id,

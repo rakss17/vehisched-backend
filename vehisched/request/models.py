@@ -44,6 +44,7 @@ class Request(models.Model):
     vehicle = models.ForeignKey(
         Vehicle, on_delete=models.SET_NULL, null=True, blank=True)
     vehicle_capacity = models.IntegerField(null=True, blank=True)
+    merged_with = models.TextField(null=True, blank=True)
     date_reserved = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     driver_name = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='driver_requests')
@@ -51,6 +52,7 @@ class Request(models.Model):
         Type, on_delete=models.SET_NULL, null=True, blank=True)
     vehicle_driver_status_id = models.OneToOneField(
         Vehicle_Driver_Status, on_delete=models.SET_NULL, null=True, blank=True)
+    main_merge = models.BooleanField(default=False)
     status = models.CharField(max_length=255, choices=[
         ('Approved', 'Approved'),
         ('Approved - Alterate Vehicle', 'Approved - Alterate Vehicle'),

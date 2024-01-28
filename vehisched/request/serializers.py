@@ -39,7 +39,7 @@ class RequestSerializer(serializers.ModelSerializer):
         model = Request
         fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
                   'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
-                  'driver_mobile_number','distance', 'vehicle_driver_status']
+                  'driver_mobile_number','distance', 'vehicle_driver_status', 'main_merge']
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if instance.purpose is None and instance.vehicle is not None:
@@ -136,7 +136,7 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
         model = Request
         fields = ['request_id', 'requester_full_name','requester_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
-                  'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office', 'driver_id', 'vehicle_capacity']
+                  'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office', 'driver_id', 'vehicle_capacity', 'merged_with', 'main_merge']
 
 # class AnswerSerializer(serializers.ModelSerializer):
 #    class Meta:
