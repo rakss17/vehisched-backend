@@ -158,8 +158,9 @@ class RequesterListView(generics.ListAPIView):
     serializer_class = FetchedUserSerializer
 
     def get_queryset(self):
+        requester = self.request.GET.get('requester')
         requester_role = Role.objects.get(role_name='requester')
-        queryset = User.objects.filter(role=requester_role)
+        queryset = User.objects.filter(role=requester_role).exclude(id=requester)
         return queryset
     
 

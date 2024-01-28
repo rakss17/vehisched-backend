@@ -133,10 +133,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
             )
             notification.save()
 
-        driver_name = request.data['driver_name']
-
-        driver = User.objects.get(username=driver_name)
-
         plate_number = request.data.get('vehicle')
 
         vehicle = Vehicle.objects.get(plate_number=plate_number)
@@ -150,6 +146,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
         merge_trip = request.data['merge_trip']
         
         if role == 'requester' and not merge_trip:
+            driver = User.objects.get(username=request.data['driver_name'])
 
             matching_requests_approved_maintenance = Request.objects.filter(
                 (
@@ -256,7 +253,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = False,
-                    driver_name=None )
+                    driver_name=None,
+                     vehicle_capacity=request.data['vehicle_capacity'] )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=None,
                     plate_number=vehicle,
@@ -293,9 +291,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = False,
-                    driver_name = driver )
+                    driver_name = driver,
+                    vehicle_capacity=request.data['vehicle_capacity'] )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-                    driver_id=None,
+                    driver_id=driver,
                     plate_number=vehicle,
                     status='Reserved - Assigned')
 
@@ -317,6 +316,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 return Response(RequestSerializer(new_request).data, status=201)
                                 
         if role == "vip" and not merge_trip:
+            driver = User.objects.get(request.data['driver_name'])
             
             unavailable_driver = Request.objects.filter(
                 (
@@ -359,7 +359,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = True,
-                    driver_name = None
+                    driver_name = None,
+                    vehicle_capacity=request.data['vehicle_capacity']
                 )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                 driver_id=None,
@@ -399,10 +400,11 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = True,
-                    driver_name = driver
+                    driver_name = driver,
+                    vehicle_capacity=request.data['vehicle_capacity']
                 )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-                driver_id=None,
+                driver_id=driver,
                 plate_number=vehicle,
                 status='Reserved - Assigned')
                 new_request.vehicle_driver_status_id = vehicle_driver_status
@@ -424,9 +426,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 return Response(RequestSerializer(new_request).data, status=201)
 
         if merge_trip and not role == 'vip':
+            driver = User.objects.get(id=request.data['driver_name'])
             requester = User.objects.get(id=request.data['requester_name'])
             vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-                driver_id=None,
+                driver_id=driver,
                 plate_number=vehicle,
                 status='Reserved - Assigned'
             )
@@ -440,12 +443,14 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 destination=request.data['destination'],
                 office=None,
                 number_of_passenger=request.data['number_of_passenger'],
-                passenger_name=None,
+                passenger_name=request.data['passenger_name'],
                 purpose=None,
                 status= 'Pending',
                 vehicle= vehicle,
                 type = Type.objects.get(name=typee),
                 distance = request.data['distance'],
+                driver_name = driver,
+                vehicle_capacity=request.data['vehicle_capacity']
             )
 
             new_request.vehicle_driver_status_id = vehicle_driver_status

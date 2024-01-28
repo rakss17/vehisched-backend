@@ -43,6 +43,7 @@ class Request(models.Model):
     purpose = models.CharField(max_length=1000, null=True, blank=True)
     vehicle = models.ForeignKey(
         Vehicle, on_delete=models.SET_NULL, null=True, blank=True)
+    vehicle_capacity = models.IntegerField(null=True, blank=True)
     date_reserved = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     driver_name = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='driver_requests')
