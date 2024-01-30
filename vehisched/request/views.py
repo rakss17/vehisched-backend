@@ -319,7 +319,10 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 return Response(RequestSerializer(new_request).data, status=201)
                                 
         if role == "vip" and not merge_trip:
-            driver = User.objects.get(request.data['driver_name'])
+            driver = User.objects.get(username=request.data['driver_name'])
+            vehicle_capacity = request.data['vehicle_capacity']
+            number_of_passenger = request.data['number_of_passenger']
+            vacant = vehicle_capacity - number_of_passenger
             
             unavailable_driver = Request.objects.filter(
                 (
@@ -363,12 +366,13 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = True,
                     driver_name = None,
-                    vehicle_capacity=vacant
-                )
+                    vehicle_capacity=vacant)
+                
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-                driver_id=None,
-                plate_number=vehicle,
-                status='Reserved - Assigned')
+                    driver_id=None,
+                    plate_number=vehicle,
+                    status='Reserved - Assigned')
+                
                 new_request.vehicle_driver_status_id = vehicle_driver_status
                 new_request.save()
 
@@ -404,12 +408,13 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = True,
                     driver_name = driver,
-                    vehicle_capacity=vacant
-                )
+                    vehicle_capacity=vacant)
+                
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
-                driver_id=driver,
-                plate_number=vehicle,
-                status='Reserved - Assigned')
+                    driver_id=driver,
+                    plate_number=vehicle,
+                    status='Reserved - Assigned')
+                
                 new_request.vehicle_driver_status_id = vehicle_driver_status
                 new_request.save()
 

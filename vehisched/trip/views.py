@@ -83,7 +83,7 @@ class ScheduleRequesterView(generics.ListAPIView):
         if await_alterate_trips:
             vehicle_recommendation = []
             for await_alterate_trip in await_alterate_trips:
-                await_alterate_trip_id = await_alterate_trip.id
+                await_alterate_trip_id = await_alterate_trip.trip_id
                 await_alterate_request_id = await_alterate_trip.request_id.request_id
                 await_alterate_vehicle_capacity = await_alterate_trip.request_id.vehicle.capacity
                 await_alterate_vehicle_travel_date = await_alterate_trip.request_id.travel_date
