@@ -450,7 +450,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 office=None,
                 number_of_passenger=request.data['number_of_passenger'],
                 passenger_name=request.data['passenger_name'],
-                purpose=None,
+                purpose=request.data['purpose'],
                 status= 'Pending',
                 vehicle= vehicle,
                 type = Type.objects.get(name=typee),
@@ -458,7 +458,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 driver_name = driver,
                 vehicle_capacity=vacant,
                 merged_with=request.data['merged_with'],
-                main_merge=merge_trip
+                main_merge=merge_trip,
+                
             )
 
             new_request.vehicle_driver_status_id = vehicle_driver_status
