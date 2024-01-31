@@ -9,12 +9,17 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+load_dotenv()
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
@@ -25,12 +30,19 @@ SECRET_KEY = 'django-insecure-2!ybo2mbakao%7u5znbp!c-mhthyhb3(yec(=^w(u)c@+agiow
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_EXPOSE_HEADERS = ['Content-Disposition']
+
+BASE_URL = 'http://localhost:8000/'
+FRONTEND_URL = 'http://192.168.1.11:5173'
 
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,7 +51,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
-    'djoser'
+    'corsheaders',
+    'djoser',
+    'channels',
+    'django_celery_beat',
+    'accounts',
+    'request',
+    'vehicle',
+    'trip',
+    'notification',
 ]
 
 MIDDLEWARE = [
@@ -50,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -71,6 +92,8 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+
+ASGI_APPLICATION = 'config.asgi.application'
 
 
 # Database
@@ -108,7 +131,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Manila'
 
 USE_I18N = True
 
@@ -125,7 +148,12 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+AUTH_USER_MODEL = "accounts.User"
+
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
     )
@@ -134,10 +162,47 @@ REST_FRAMEWORK = {
 DJOSER = {
     'SEND_ACTIVATION_EMAIL': True,
     'SEND_CONFIRMATION_EMAIL': True,
-    'ACTIVATION_URL': 'activation/{uid}/{token}',
+    "PASSWORD_CHANGED_EMAIL_CONFIRMATION": True,
+    'ACTIVATION_URL': 'api/v1/accounts/activation/{uid}/{token}',
+    'PASSWORD_RESET_CONFIRM_URL': 'api/v1/accounts/reset_password/{uid}/{token}',
+    'SERIALIZERS': {
+        'user_create': 'accounts.serializers.UserSerializer',
+    },
 }
 
-EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
-EMAIL_HOST_USER = '071402bd28ae37'
-EMAIL_HOST_PASSWORD = '********0187'
-EMAIL_PORT = '2525'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+
+            "hosts": [("localhost", 6379)],
+        },
+    },
+}
+
+# Celery Beat Settings
+# CELERY_BEAT_SCHEDULE = {
+#     'check_travel_dates': {
+#         'task': 'tripticket.views.check_travel_dates',
+#         'schedule': crontab(minute='*/1'),  # Run every 15 minutes
+#     },
+# }
+
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'Asia/Manila'
+
+# CELERY_TASK_ALWAYS_EAGER = False
+# CELERY_TASK_EAGER_PROPAGATES = False
+# CELERY_WORKER_REDIRECT_STDOUTS = False
+
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')

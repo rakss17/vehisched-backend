@@ -4,9 +4,22 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
 djangorestframework = "*"
 djoser = "*"
+django-cors-headers = "*"
+channels = "*"
+channels-redis = "*"
+daphne = "*"
+pillow = "*"
+python-dotenv = "*"
+setuptools = "==57.5.0"
+celery = "*"
+django = "*"
+django-celery = "*"
+django-celery-beat = "*"
+pymupdf = "*"
+qrcode = {extras = ["pil"], version = "*"}
+numpy = "*"
 
 [dev-packages]
 
