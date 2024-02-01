@@ -26,7 +26,7 @@ services:
   redis:
     image: redis:latest
     ports:
-      - "6381:6381" # Expose Redis default port
+      - "6382:6381" # Expose Redis default port
 
   # Celery Worker
   celery_worker:
