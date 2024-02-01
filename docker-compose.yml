@@ -37,6 +37,9 @@ services:
     command: celery -A vehisched.config.celery worker --pool=solo -l info
     volumes:
       - .:/code
+    working_dir: /code
+    environment:
+      - PYTHONPATH=/code
     depends_on:
       - redis
 
@@ -49,6 +52,9 @@ services:
     command: celery -A vehisched.config.celery beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     volumes:
       - .:/code
+    working_dir: /code
+    environment:
+      - PYTHONPATH=/code
     depends_on:
       - redis
 
