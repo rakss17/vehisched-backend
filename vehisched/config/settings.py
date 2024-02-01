@@ -36,8 +36,7 @@ CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_EXPOSE_HEADERS = ['Content-Disposition']
 
-BASE_URL = 'http://localhost:8000/'
-FRONTEND_URL = 'http://192.168.1.11:5173'
+FRONTEND_URL = 'https://rakss17.github.io/vehisched-webapp'
 
 # Application definition
 
@@ -64,6 +63,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -142,6 +142,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

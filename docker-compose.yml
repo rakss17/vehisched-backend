@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  # Django App
+  django_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vehisched_backend:latest
+    ports:
+      - "8099:8000" # Expose port 8083 for the web server
+    environment:
+      - PYTHONBUFFERED=1
+    command:
+      [
+        "sh",
+        "-c",
+        "python vehisched/manage.py collectstatic --noinput && python vehisched/manage.py makemigrations && python vehisched/manage.py migrate && python vehisched/manage.py runserver 0.0.0.0:8000",
+      ]
+    volumes:
+      - .:/code # For hotreloading
+
+volumes:
+  vehisched:
