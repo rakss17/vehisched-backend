@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
+import os
 
 
 class Role(models.Model):
@@ -47,8 +49,22 @@ class User(AbstractUser):
         return self.username
 
 
+@receiver(post_migrate)
+def create_superuser(sender, **kwargs):
+    if sender.name == 'accounts':
+        Custom_User = User
+        username = os.getenv('DJANGO_ADMIN_USERNAME')
+        email = os.getenv('DJANGO_ADMIN_EMAIL')
+        password = os.getenv('DJANGO_ADMIN_PASSWORD')
+        role = 'admin'
 
+        if not Custom_User.objects.filter(username=username).exists():
+            # Create the superuser with is_active set to False
+            superuser = Custom_User.objects.create_superuser(
+                username=username, email=email, password=password, role=role)
 
-
-
+            # Activate the superuser
+            superuser.is_active = True
+            print('Created admin account')
+            superuser.save()
 
