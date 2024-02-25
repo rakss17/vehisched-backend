@@ -177,7 +177,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("10.0.10.4", 6381)],
+            "hosts": [("10.0.10.4", 6382)],
         },
     },
 }
@@ -191,8 +191,8 @@ CHANNEL_LAYERS = {
 # }
 
 
-CELERY_BROKER_URL = '10.0.10.4:6381'
-CELERY_RESULT_BACKEND = '10.0.10.4:6381'
+CELERY_BROKER_URL = '10.0.10.4:6382'
+CELERY_RESULT_BACKEND = '10.0.10.4:6382'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
