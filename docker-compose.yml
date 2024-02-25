@@ -22,22 +22,11 @@ services:
     depends_on:
       - redis
 
-  rabbitmq:
-    image: rabbitmq:3.6.6
-    ports:
-      - "5672:5672"
-    environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=mypass
-
   # Redis Server
   redis:
     image: redis:latest
     ports:
       - "6382:6381" # Expose Redis default port
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-    command: redis-server /usr/local/etc/redis/redis.conf
 
   # Celery Worker
   celery_worker:
@@ -50,11 +39,9 @@ services:
       - .:/code
     working_dir: /code
     environment:
-      - BROKER_URL=amqp://admin:mypass@rabbitmq:5672//
-      - RESULT_BACKEND=redis://redis:6379/0
-      - C_FORCE_ROOT=true
+      - PYTHONPATH=/code
+      - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
-      - rabbitmq
       - redis
 
   # Celery Beat Scheduler
@@ -68,11 +55,9 @@ services:
       - .:/code
     working_dir: /code
     environment:
-      - BROKER_URL=amqp://admin:mypass@rabbitmq:5672//
-      - RESULT_BACKEND=redis://redis:6379/0
-      - C_FORCE_ROOT=true
+      - PYTHONPATH=/code
+      - CELERY_BROKER_URL=redis://redis:6379/0
     depends_on:
-      - rabbitmq
       - redis
 
 volumes:
