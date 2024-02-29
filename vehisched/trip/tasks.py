@@ -28,7 +28,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject=f"This is a reminder that your scheduled travel to {request_data.destination} is in 24 hours. Departure time: {request_data.travel_time}. Safe travels!", 
-                purpose=trip.id
+                purpose=trip.trip_id
             ).exists()
             
             if not existing_notification:
@@ -43,7 +43,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject=f"This is a reminder that your scheduled travel to {request_data.destination} is in 24 hours. Departure time: {request_data.travel_time}. Safe travels!",
-                    purpose=trip.id
+                    purpose=trip.trip_id
                 )
                 notification.save()
                             
@@ -51,7 +51,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="Only 12 hours left until your travel begins. Make sure you're all set!", 
-                purpose=trip.id).exists()
+                purpose=trip.trip_id).exists()
             
             if not existing_notification:
                 async_to_sync(channel_layer.group_send)(
@@ -64,7 +64,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Only 12 hours left until your travel begins. Make sure you're all set!",
-                    purpose=trip.id
+                    purpose=trip.trip_id
                 )
                 notification.save()
         
@@ -72,7 +72,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!", 
-                purpose=trip.id).exists()
+                purpose=trip.trip_id).exists()
             if not existing_notification:
                 async_to_sync(channel_layer.group_send)(
             f"user_{request_data.requester_name}", 
@@ -84,7 +84,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
-                    purpose=trip.id
+                    purpose=trip.trip_id
                 )
                 notification.save()
 
@@ -92,7 +92,7 @@ def check_travel_dates():
             existing_notification = Notification.objects.filter(
                 owner=request_data.requester_name, 
                 subject="Your travel will commence now", 
-                purpose=trip.id).exists()
+                purpose=trip.trip_id).exists()
             if not existing_notification:
                 async_to_sync(channel_layer.group_send)(
             f"user_{request_data.requester_name}", 
@@ -104,7 +104,7 @@ def check_travel_dates():
                 notification = Notification(
                     owner=request_data.requester_name,
                     subject="Your travel will commence now",
-                    purpose=trip.id
+                    purpose=trip.trip_id
                 )
                 notification.save()
 
@@ -123,7 +123,7 @@ def check_travel_dates():
         #     existing_notification = Notification.objects.filter(
         #         owner=request_data.requester_name, 
         #         subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!", 
-        #         purpose=trip.id).exists()
+        #         purpose=trip.trip_id).exists()
         #     if not existing_notification:
         #         async_to_sync(channel_layer.group_send)(
         #     f"user_{request_data.requester_name}", 
@@ -135,7 +135,7 @@ def check_travel_dates():
         #         notification = Notification(
         #             owner=request_data.requester_name,
         #             subject="Your schedule awaits! Just 1 hour until your travel begins. Be ready!",
-        #             purpose=trip.id
+        #             purpose=trip.trip_id
         #         )
         #         notification.save()
             
