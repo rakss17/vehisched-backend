@@ -182,25 +182,12 @@ CHANNEL_LAYERS = {
     },
 }
 
-# Celery Beat Settings
-# CELERY_BEAT_SCHEDULE = {
-#     'check_travel_dates': {
-#         'task': 'tripticket.views.check_travel_dates',
-#         'schedule': crontab(minute='*/1'),  # Run every 15 minutes
-#     },
-# }
-
-
 CELERY_BROKER_URL = '10.0.10.4:6382'
 CELERY_RESULT_BACKEND = '10.0.10.4:6382'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Manila'
-
-# CELERY_TASK_ALWAYS_EAGER = False
-# CELERY_TASK_EAGER_PROPAGATES = False
-# CELERY_WORKER_REDIRECT_STDOUTS = False
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
 EMAIL_HOST = os.getenv('EMAIL_HOST')
