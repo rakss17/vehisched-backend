@@ -144,6 +144,144 @@ class RequestListCreateView(generics.ListCreateAPIView):
         typee = request.data['type']
         role = request.data['role']
         merge_trip = request.data['merge_trip']
+
+        if role == 'office staff' and not merge_trip:
+            print('data', request.data)
+            requester_name = User.objects.get(id=request.data['requester_name'])
+            driver = User.objects.get(id=request.data['driver_name'])
+            vehicle_capacity = request.data['vehicle_capacity']
+            number_of_passenger = request.data['number_of_passenger']
+            vacant = vehicle_capacity - number_of_passenger
+            if Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) |
+                    Q(return_date__range=[travel_date, return_date]) 
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(travel_time__range=[travel_time, return_time])
+                ) | (
+                    Q(return_date__range=[travel_date, return_date]) &
+                    Q(return_time__range=[travel_time, return_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, return_date]) &
+                    Q(return_date__range=[travel_date, return_date])         
+                ),
+                vehicle=vehicle,
+                status__in=['Pending', 'Awaiting Vehicle Alteration']
+            ).exclude(
+                (Q(travel_date=return_date) & Q(travel_time__gte=return_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            ).exists():
+                error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
+                return Response({'error': error_message}, status=400)
+        
+            
+            
+            unavailable_driver = Request.objects.filter(
+                (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) |
+                    Q(return_date__range=[travel_date, travel_date])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(travel_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(return_date__range=[travel_date, travel_date]) &
+                    Q(return_time__range=[travel_time, travel_time])
+                ) | (
+                    Q(travel_date__range=[travel_date, travel_date]) &
+                    Q(return_date__range=[travel_date, travel_date])
+                ),
+                driver_name=driver,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Driver Absence']
+            ).exclude(
+                (Q(travel_date=travel_date) & Q(travel_time__gte=travel_time)) |
+                (Q(return_date=travel_date) & Q(return_time__lte=travel_time))
+            )
+            if unavailable_driver.exists():
+                new_request = Request.objects.create(
+                    requester_name=requester_name,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = False,
+                    driver_name=None,
+                     vehicle_capacity=vacant )
+                vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                    driver_id=None,
+                    plate_number=vehicle,
+                    status='Reserved - Assigned')
+                new_request.vehicle_driver_status_id = vehicle_driver_status
+                new_request.save()
+
+                notification = Notification(
+                    owner=self.request.user,
+                    subject=f"A new request has been submitted by {self.request.user}" )
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_created',
+                    'message': f"A new request has been submitted by {self.request.user}",
+                })
+                return Response(RequestSerializer(new_request).data, status=201)
+            else: 
+                new_request = Request.objects.create(
+                    requester_name=requester_name,
+                    travel_date=travel_date,
+                    travel_time=travel_time,
+                    return_date=return_date,
+                    return_time=return_time,
+                    destination=request.data['destination'],
+                    office=request.data['office'],
+                    number_of_passenger=request.data['number_of_passenger'],
+                    passenger_name=passenger_name,
+                    purpose=request.data['purpose'],
+                    status= 'Pending',
+                    vehicle= vehicle,
+                    type = Type.objects.get(name=typee),
+                    distance = request.data['distance'],
+                    from_vip_alteration = False,
+                    driver_name = driver,
+                    vehicle_capacity=vacant )
+                vehicle_driver_status = Vehicle_Driver_Status.objects.create(
+                    driver_id=driver,
+                    plate_number=vehicle,
+                    status='Reserved - Assigned')
+
+                new_request.vehicle_driver_status_id = vehicle_driver_status
+                new_request.save()
+
+                notification = Notification(
+                    owner=self.request.user,
+                    subject=f"A new request has been submitted by {self.request.user}")
+                notification.save()
+
+                async_to_sync(channel_layer.group_send)(
+                'notifications', 
+                {
+                    'type': 'notify.request_created',
+                    'message': f"A new request has been submitted by {self.request.user}",
+                })
+            
+                return Response(RequestSerializer(new_request).data, status=201)
         
         if role == 'requester' and not merge_trip:
             driver = User.objects.get(username=request.data['driver_name'])
