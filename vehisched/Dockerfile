@@ -23,8 +23,5 @@ RUN python manage.py makemigrations
 # Run custom migrate
 RUN python manage.py migrate
 
-# Run periodic task
-RUN python manage.py create_periodic_task
-
 # Expose port 8000 for the web server
 EXPOSE 8000

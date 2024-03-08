@@ -1,7 +1,8 @@
 from django.db import models
 from accounts.models import User
 from vehicle.models import Vehicle
-
+from django.db.models.signals import post_migrate
+from django.dispatch import receiver
 
 class Type(models.Model):
     type_id = models.AutoField(primary_key=True)
@@ -90,5 +91,30 @@ class Answer(models.Model):
     def __str__(self):
         return self.answer
     
+
+@receiver(post_migrate)
+def create_travel_types(sender, **kwargs):
+    if sender.name == 'request':
+
+        travel_types = ['Round Trip', 'One-way - Drop', 'One-way - Fetch']
+
+        if not Type.objects.filter(name__in=travel_types).exists():
+            for name in travel_types:
+                Type.objects.create(name=name)
+            print('Created types:', ', '.join(travel_types))
+
+
+@receiver(post_migrate)
+def create_questions(sender, **kwargs):
+    if sender.name == 'request':
+
+        question_numberS = ['CC1', 'CC2', 'CC3', 'SQD0', 'SQD1', 'SQD2', 'SQD3', 'SQD4', 'SQD5', 'SQD6', 'SQD7', 'SQD8']
+
+        if not Question.objects.filter(question_number__in=question_numberS).exists():
+
+            for question_number in question_numberS:
+                Question.objects.create(question_number=question_number)
+            print('Created questions:', ', '.join(question_numberS))
+
 
     

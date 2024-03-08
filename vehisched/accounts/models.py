@@ -47,6 +47,17 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+    
+@receiver(post_migrate)
+def create_roles(sender, **kwargs):
+    if sender.name == 'accounts':
+
+        roles = ['admin', 'requester', 'vip', 'driver', 'gate guard', 'office staff']
+
+        if not Role.objects.filter(role_name__in=roles).exists():
+            for role in roles:
+                Role.objects.create(role_name=role)
+            print('Created roles:', ', '.join(roles))
 
 
 @receiver(post_migrate)
@@ -63,6 +74,7 @@ def create_superuser(sender, **kwargs):
                 username=username, email=email, password=password)
 
             # Activate the superuser
+            superuser.role = Role.objects.get(role_name='admin')
             superuser.is_active = True
             print('Created admin account')
             superuser.save()
