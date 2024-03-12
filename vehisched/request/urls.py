@@ -8,6 +8,8 @@ urlpatterns = [
         name='request-list'),
     path('approve/<int:pk>/', views.RequestApprovedView.as_view(),
         name='request-approved'),
+    path('reschedule/<int:pk>/', views.RequestReschedule.as_view(),
+        name='request-reschedule'),
     path('cancel/<int:pk>/', views.RequestCancelView.as_view(),
         name='request-cancelled'),
     path('vehicle-maintenance/', views.VehicleMaintenance.as_view(), name='vehicle-maintenance'),

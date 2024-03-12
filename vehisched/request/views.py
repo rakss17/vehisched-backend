@@ -792,8 +792,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
 #             question = Question.objects.get(question_number=question_data['question_number'])
 #             Answer.objects.create(question=question, content=question_data['answers'])
 
-
-
 class QuestionList(generics.ListAPIView):
    def get(self, request):
        questions = Question.objects.all()
@@ -846,7 +844,26 @@ class RequestListOfficeStaffView(generics.ListAPIView):
         return super().list(request, *args, **kwargs)
 
  
+class RequestReschedule(generics.UpdateAPIView):
+    queryset = Request.objects.all()
+    serializer_class = RequestSerializer
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        new_travel_date = request.data.get('travel_date')
+        new_travel_time = request.data.get('travel_time')
+        new_return_date = request.data.get('return_date')
+        new_return_time = request.data.get('return_time')
+
+        instance.travel_date = new_travel_date
+        instance.travel_time = new_travel_time
+        instance.return_date = new_return_date
+        instance.return_time = new_return_time       
+        instance.save()
+
+       
+        return Response({"Rescheduled successfully"})
 
 class RequestApprovedView(generics.UpdateAPIView):
     queryset = Request.objects.all()
