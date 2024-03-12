@@ -146,12 +146,14 @@ class RequestListCreateView(generics.ListCreateAPIView):
         merge_trip = request.data['merge_trip']
 
         if role == 'office staff' and not merge_trip:
-            print('data', request.data)
             requester_name = User.objects.get(id=request.data['requester_name'])
             driver = User.objects.get(id=request.data['driver_name'])
             vehicle_capacity = request.data['vehicle_capacity']
             number_of_passenger = request.data['number_of_passenger']
             vacant = vehicle_capacity - number_of_passenger
+            travel_date_obj = datetime.strptime(travel_date, '%Y-%m-%d').date()
+            travel_time_obj = datetime.strptime(travel_time, '%H:%M').time()
+
             if Request.objects.filter(
                 (
                     Q(travel_date__range=[travel_date, return_date]) &
@@ -207,8 +209,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
             if unavailable_driver.exists():
                 new_request = Request.objects.create(
                     requester_name=requester_name,
-                    travel_date=travel_date,
-                    travel_time=travel_time,
+                    travel_date=travel_date_obj,
+                    travel_time=travel_time_obj,
                     return_date=return_date,
                     return_time=return_time,
                     destination=request.data['destination'],
@@ -216,7 +218,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     number_of_passenger=request.data['number_of_passenger'],
                     passenger_name=passenger_name,
                     purpose=request.data['purpose'],
-                    status= 'Pending',
+                    status= 'Approved',
                     vehicle= vehicle,
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
@@ -245,8 +247,8 @@ class RequestListCreateView(generics.ListCreateAPIView):
             else: 
                 new_request = Request.objects.create(
                     requester_name=requester_name,
-                    travel_date=travel_date,
-                    travel_time=travel_time,
+                    travel_date=travel_date_obj,
+                    travel_time=travel_time_obj,
                     return_date=return_date,
                     return_time=return_time,
                     destination=request.data['destination'],
@@ -254,7 +256,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     number_of_passenger=request.data['number_of_passenger'],
                     passenger_name=passenger_name,
                     purpose=request.data['purpose'],
-                    status= 'Pending',
+                    status= 'Approved',
                     vehicle= vehicle,
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
@@ -280,6 +282,135 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     'type': 'notify.request_created',
                     'message': f"A new request has been submitted by {self.request.user}",
                 })
+
+                from_vip_alteration = new_request.from_vip_alteration
+                
+                trip = Trip(
+                    trip_id=new_request.request_id,
+                    request_id=new_request,
+                )
+                trip.save()
+
+                if from_vip_alteration:
+                    filtered_requests = Request.objects.filter(
+                        (
+                            Q(travel_date__range=[travel_date, return_date]) &
+                            Q(return_date__range=[travel_date, return_date]) 
+                        ) | (
+                            Q(travel_date__range=[travel_date, return_date]) |
+                            Q(return_date__range=[travel_date, return_date])
+                        ) | (
+                            Q(travel_date__range=[travel_date, return_date]) &
+                            Q(travel_time__range=[travel_time, return_time])
+                        ) | (
+                            Q(return_date__range=[travel_date, return_date]) &
+                            Q(return_time__range=[travel_time, return_time])
+                        ) | (
+                            Q(travel_date__range=[travel_date, return_date]) &
+                            Q(return_date__range=[travel_date, return_date]) &
+                            Q(travel_time__gte=travel_time) &
+                            Q(return_time__lte=return_time)
+                        ),
+                        vehicle=vehicle,
+                        vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip'],
+                        status__in=['Approved', 'Rescheduled', 'Approved - Alterate Vehicle'],
+                    ).exclude(request_id=new_request.request_id)
+
+                    if filtered_requests.exists():
+                        for requestt in filtered_requests:
+
+                            travel_date_formatted = requestt.travel_date.strftime('%m/%d/%Y')
+                            travel_time_formatted = requestt.travel_time.strftime('%I:%M %p')
+                            return_date_formatted = requestt.return_date.strftime('%m/%d/%Y')
+                            return_time_formatted = requestt.return_time.strftime('%I:%M %p')
+
+                            notification = Notification(
+                                owner=requestt.requester_name,
+                                subject=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
+                            )
+                            notification.save()
+
+                            async_to_sync(channel_layer.group_send)(
+                                f"user_{requestt.requester_name}", 
+                                {
+                                    'type': 'recommend_notification',
+                                    'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
+                                }
+                            )
+                        filtered_requests.update(status='Awaiting Vehicle Alteration')
+                travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                destination = new_request.destination.split(',', 1)[0]
+
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{new_request.requester_name}", 
+                    {
+                        'type': 'approve_notification',
+                        'message': f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",
+                    }
+                )
+
+                notification = Notification(
+                    owner=new_request.requester_name,  
+                    subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
+                )
+                notification.save()
+
+                
+                driver_name = new_request.driver_name.get_full_name()
+                vehicle_plate_number = new_request.vehicle.plate_number
+                vehicle_model = new_request.vehicle.model
+                requester_name = new_request.requester_name.get_full_name()
+                
+                destination = destination
+                purpose = new_request.purpose
+                if(new_request.date_reserved):
+                    formatted_datereserved = timedate.datetime.strftime(new_request.date_reserved, "%m/%d/%Y, %I:%M %p")
+
+                passenger_name_list = new_request.passenger_name
+
+                passenger_names_string = ", ".join(passenger_name_list)
+
+                qr = qrcode.QRCode(
+                    version=1,
+                    error_correction=qrcode.constants.ERROR_CORRECT_L,
+                    box_size=10,
+                    border=4,
+                )
+                qr.add_data(new_request.request_id)
+                qr.make(fit=True)
+
+                img = qr.make_image(fill_color="black", back_color="white")
+
+                img.save("temp.png")
+
+                pixmap = fitz.Pixmap("temp.png")
+
+                doc = fitz.open('media/documents/tripticket.pdf')
+                page = doc[0] 
+
+                text_annotations = {
+                    driver_name: [220, 142],
+                    vehicle_plate_number +" " + vehicle_model: [220, 152],
+                    requester_name+", " + passenger_names_string: [220, 160],
+                    destination: [220, 170],
+                    purpose: [130, 180],
+                    formatted_datereserved: [450, 80]
+                }
+                rect = fitz.Rect(520, 20, 570, 70)  
+                page.insert_image(rect, pixmap=pixmap)
+
+                for text, coordinates in text_annotations.items():
+                    page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
+
+                doc.save(f"media/documents/tripticket{new_request.request_id}.pdf")
+                doc.close()
+                os.remove("temp.png")
+                
+                trip.qr_code_data = new_request.request_id
+                trip.tripticket_pdf = f"documents/tripticket{new_request.request_id}.pdf"
+                trip.save()
+
             
                 return Response(RequestSerializer(new_request).data, status=201)
         
