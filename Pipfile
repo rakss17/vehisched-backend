@@ -20,6 +20,7 @@ django-celery-beat = "*"
 pymupdf = "*"
 qrcode = {extras = ["pil"], version = "*"}
 numpy = "*"
+whitenoise = "*"
 
 [dev-packages]
 

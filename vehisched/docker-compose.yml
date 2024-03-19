@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  # Django App
+  django_backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vehisched_backend:latest
+    ports:
+      - "8099:8000" # Expose port 8083 for the web server
+    environment:
+      - PYTHONBUFFERED=1
+    command:
+      [
+        "sh",
+        "-c",
+        "python manage.py collectstatic --noinput && python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000",
+      ]
+    volumes:
+      - .:/code # For hot reloading
+    depends_on:
+      - redis
+
+  # Redis Server
+  redis:
+    image: redis:latest
+    ports:
+      - "6382:6381" # Expose Redis default port
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+  # Celery Worker
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vehisched_backend:latest
+    command: celery -A config worker --pool=solo -l info
+    volumes:
+      - .:/code
+    working_dir: /code
+    environment:
+      - PYTHONPATH=/code
+      - CELERY_BROKER_URL=redis://redis:6381/0
+      - CELERY_RESULT_BACKEND=redis://redis:6381/0
+    depends_on:
+      - redis
+
+  # Celery Beat Scheduler
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vehisched_backend:latest
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - .:/code
+    working_dir: /code
+    environment:
+      - PYTHONPATH=/code
+      - CELERY_BROKER_URL=redis://redis:6381/0
+      - CELERY_RESULT_BACKEND=redis://redis:6381/0
+      - DJANGO_SETTINGS_MODULE=config.settings
+    depends_on:
+      - redis
+
+volumes:
+  vehisched:

@@ -28,16 +28,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SECRET_KEY = 'django-insecure-2!ybo2mbakao%7u5znbp!c-mhthyhb3(yec(=^w(u)c@+agiow'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
+CSRF_TRUSTED_ORIGINS = ["https://vehisched-backend.keannu1.duckdns.org"]
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_EXPOSE_HEADERS = ['Content-Disposition']
 
-BASE_URL = 'http://localhost:8000/'
-FRONTEND_URL = 'http://192.168.1.11:5173'
+FRONTEND_URL = 'https://rakss17.github.io/vehisched-webapp'
 
 # Application definition
 
@@ -64,6 +64,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -142,6 +143,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -174,31 +177,17 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-
-            "hosts": [("localhost", 6379)],
+            "hosts": [("redis", 6381)],
         },
     },
 }
 
-# Celery Beat Settings
-# CELERY_BEAT_SCHEDULE = {
-#     'check_travel_dates': {
-#         'task': 'tripticket.views.check_travel_dates',
-#         'schedule': crontab(minute='*/1'),  # Run every 15 minutes
-#     },
-# }
-
-
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://redis:6381'
+CELERY_RESULT_BACKEND = 'redis://redis:6381'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Manila'
-
-# CELERY_TASK_ALWAYS_EAGER = False
-# CELERY_TASK_EAGER_PROPAGATES = False
-# CELERY_WORKER_REDIRECT_STDOUTS = False
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND')
 EMAIL_HOST = os.getenv('EMAIL_HOST')
