@@ -9,8 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from request.models import Request
 from django.utils import timezone
-
-
+import base64
 
 class VehicleListCreateView(generics.ListCreateAPIView):
 
@@ -183,9 +182,21 @@ class VehicleEachSchedule(generics.ListAPIView):
             )
             serializer = self.serializer_class(queryset, many=True)
             vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
+            plate_number = vehicle.plate_number
+            model = vehicle.model
+            capacity = vehicle.capacity
+            type = vehicle.type
+
+            image_url = vehicle.image.url if vehicle.image else None
+
             requests_by_vehicle[vehicle.plate_number] = {
                 'vehicle': vehicle_key,
-                'schedules': serializer.data
+                'plate_number': plate_number,
+                'model': model,
+                'capacity': capacity,
+                'type': type,
+                'image': image_url,
+                'schedules': serializer.data,
             }
 
         return Response(requests_by_vehicle)
