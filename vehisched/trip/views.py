@@ -12,7 +12,8 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from request.serializers import RequestSerializer
-from datetime import datetime
+from datetime import datetime, timedelta
+from django.utils.dateparse import parse_date, parse_time
 from django.utils import timezone
 from django.http import FileResponse
 from channels.layers import get_channel_layer
@@ -299,6 +300,73 @@ class CheckDriverAvailability(generics.ListAPIView):
         available_drivers = list(available_drivers.values('id', 'first_name', 'last_name', 'middle_name', 'role_id', 'username', 'email'))
 
         return JsonResponse(available_drivers, safe=False)
+    
+class CheckTimeAvailability(generics.ListAPIView):
+    
+    def get(self, request, *args, **kwargs):
+        preferred_start_travel_date = datetime.strptime(self.request.GET.get('preferred_start_travel_date'), "%Y-%m-%d")
+        preferred_end_travel_date = datetime.strptime(self.request.GET.get('preferred_end_travel_date'), "%Y-%m-%d")
+
+        available_times_by_date = {}
+        current_date = preferred_start_travel_date
+        while current_date <= preferred_end_travel_date:
+            start_time = datetime.combine(current_date, datetime.min.time())
+            end_time = datetime.combine(current_date, datetime.max.time())
+            time_slots = self.generate_time_slots(start_time, end_time)
+            available_times_by_date[current_date.strftime("%Y-%m-%d")] = []
+            for time_slot in time_slots:
+                if self.is_time_slot_available(time_slot, current_date):
+                    available_times_by_date[current_date.strftime("%Y-%m-%d")].append(time_slot.strftime("%H:%M"))
+            current_date += timedelta(days=1)
+        formatted_available_times = {date: {'available_time': times} for date, times in available_times_by_date.items()}
+        return Response(formatted_available_times)
+
+    def generate_time_slots(self, start_time, end_time):
+        time_slots = []
+        current_time = start_time
+        while current_time < end_time:
+            time_slots.append(current_time)
+            current_time += timedelta(minutes=30)
+        return time_slots
+
+    def is_time_slot_available(self, time_slot, date):
+        time_slot_time = time_slot.time()
+        time_slot_datetime = datetime.combine(date, time_slot_time)
+        preferred_start_travel_date = date 
+        preferred_end_travel_date = date 
+        preferred_start_travel_time = time_slot_time 
+        preferred_end_travel_time = time_slot_time
+        overlapping_requests = Request.objects.filter(
+        (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+        ) | (
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ) | (Q(travel_time=preferred_start_travel_time) | Q(return_time=preferred_start_travel_time)) 
+    ).exclude(
+            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
+            
+        )
+        return not overlapping_requests.exists()
+    
+    # overlapping_requests = Request.objects.filter(
+    #         Q(travel_date=date, travel_time__lte=time_slot_datetime, return_time__gte=time_slot_datetime) |
+    #         Q(return_date=date, return_time__gte=time_slot_datetime)
+    #     )
+    
+ 
+
 
 
 class VehicleSchedulesView(generics.ListAPIView):
