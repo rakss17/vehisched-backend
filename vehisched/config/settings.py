@@ -28,7 +28,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SECRET_KEY = 'django-insecure-2!ybo2mbakao%7u5znbp!c-mhthyhb3(yec(=^w(u)c@+agiow'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ["https://vehisched-backend.keannu1.duckdns.org"]

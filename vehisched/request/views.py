@@ -1,6 +1,6 @@
 from rest_framework import generics, status, mixins
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
+from .models import Request, Type, Vehicle_Driver_Status, Question, Answer, AddressFromGoogleMap
 from trip.models import Trip
 from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer, AnswerSerializer
@@ -97,6 +97,31 @@ def get_place_details(request):
         place_data['estimated_arrival_time'] = None
         place_data['estimated_return_time'] = None
         place_data['distance'] = None
+
+    arrival_date, arrival_time = place_data["estimated_arrival_time"].split("T")
+    return_date, return_time = place_data["estimated_return_time"].split("T")
+    distanceString = place_data["distance"]
+    distance = float(distanceString.split()[0])
+
+    addressComponents = [
+        {"short_name": component["short_name"]} for component in place_data["result"]["address_components"]
+    ]
+    addressName = place_data["result"]["name"]
+    fullAddress = addressName + ", " + ", ".join(component["short_name"] for component in addressComponents)
+
+    if not AddressFromGoogleMap.objects.filter(place_id=place_id).exists():
+        AddressFromGoogleMap.objects.create(
+            place_id=place_id,
+            full_address=fullAddress,
+            distance=distance,
+            estimated_arrival_date_to_destination=arrival_date,
+            estimated_arrival_time_to_destination=arrival_time,
+            estimated_return_date_to_ustp=return_date,
+            estimated_return_time_to_ustp=return_time
+        )
+        print("Google Map Address successfully added to Vehi-Sched Database.")
+    else:
+        print("Google Map Address already exists in Vehi-Sched Database.")
 
     return JsonResponse(place_data)
 
