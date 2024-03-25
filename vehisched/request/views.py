@@ -25,6 +25,17 @@ import os
 
 load_dotenv()
 
+def calculate_date_gap(date1, date2):
+    diff = date2 - date1
+
+    return {
+        "milliseconds": diff.total_seconds() * 1000,
+        "seconds": diff.total_seconds(),
+        "minutes": diff.total_seconds() / 60,
+        "hours": diff.total_seconds() / 3600,
+        "days": diff.days
+    }
+
 def estimate_arrival_time(origin, destination, departure_time):
     api_key = os.getenv('GOOGLE_MAP_API_KEY')
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
@@ -109,15 +120,27 @@ def get_place_details(request):
     addressName = place_data["result"]["name"]
     fullAddress = addressName + ", " + ", ".join(component["short_name"] for component in addressComponents)
 
+    date_time1 = parse(f"{travel_date}T{travel_time}")
+    date_time2 = datetime.strptime(f"{return_date} {return_time}", "%Y-%m-%d %H:%M:%S")
+
+    result = calculate_date_gap(date_time1, date_time2)
+
     if not AddressFromGoogleMap.objects.filter(place_id=place_id).exists():
         AddressFromGoogleMap.objects.create(
             place_id=place_id,
             full_address=fullAddress,
             distance=distance,
+            travel_date=travel_date,
+            travel_time=travel_time,
             estimated_arrival_date_to_destination=arrival_date,
             estimated_arrival_time_to_destination=arrival_time,
             estimated_return_date_to_ustp=return_date,
-            estimated_return_time_to_ustp=return_time
+            estimated_return_time_to_ustp=return_time,
+            travel_return_date_gap_in_milliseconds=result["milliseconds"],
+            travel_return_date_gap_in_seconds=result['seconds'],
+            travel_return_date_gap_in_minutes=result['minutes'],
+            travel_return_date_gap_in_hours=result['hours'],
+            travel_return_date_gap_in_days=result['days']
         )
         print("Google Map Address successfully added to Vehi-Sched Database.")
     else:
