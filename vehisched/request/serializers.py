@@ -66,6 +66,7 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     departure_time_from_office = serializers.SerializerMethodField()
     arrival_time_to_office = serializers.SerializerMethodField()
     driver_id = serializers.SerializerMethodField()
+    vehicle_model = serializers.SerializerMethodField()
 
     def get_driver_full_name(self, obj):
         if obj.driver_name:
@@ -108,6 +109,13 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
             return vehicle_driver_status
         return None
     
+    def get_vehicle_model(self, obj):
+        if obj.vehicle:
+            vehicle = obj.vehicle
+            vehicle_model = vehicle.model
+            return vehicle_model
+        return None
+    
     def get_departure_time_from_office(self, obj):
         if hasattr(obj, 'trip') and obj.trip.departure_time_from_office is not None:
             departure_time = obj.trip.departure_time_from_office
@@ -135,7 +143,7 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Request
         fields = ['request_id', 'requester_full_name','requester_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 
-                  'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 
+                  'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'vehicle_model', 'date_reserved', 'driver_full_name', 
                   'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office', 'driver_id', 'vehicle_capacity', 'merged_with', 'main_merge']
 
 # class AnswerSerializer(serializers.ModelSerializer):
