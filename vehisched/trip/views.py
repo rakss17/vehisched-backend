@@ -309,16 +309,56 @@ class CheckTimeAvailability(generics.ListAPIView):
 
         available_times_by_date = {}
         current_date = preferred_start_travel_date
+        unavailable_times = {'unavailable_time_in_date_range': []}
         while current_date <= preferred_end_travel_date:
             start_time = datetime.combine(current_date, datetime.min.time())
             end_time = datetime.combine(current_date, datetime.max.time())
             time_slots = self.generate_time_slots(start_time, end_time)
             available_times_by_date[current_date.strftime("%Y-%m-%d")] = []
+            first_unavailable_start_time = None
+            last_unavailable_end_time = None
+            
+        
             for time_slot in time_slots:
-                if self.is_time_slot_available(time_slot, current_date):
+                is_available, is_unavailable_within_day, is_unavailable_within_date_range = self.is_time_slot_available(time_slot, current_date)
+                if is_available:
+                    
+                    if last_unavailable_end_time is not None and time_slot.time() < last_unavailable_end_time.time():
+                    
+                        continue
+                    
+                    if first_unavailable_start_time is not None and time_slot.time() > first_unavailable_start_time.time():
+                   
+                        print("datee", first_unavailable_start_time.date())
+                        unavailable_times['unavailable_time_in_date_range'].append(first_unavailable_start_time.date())
+                        continue 
+                   
                     available_times_by_date[current_date.strftime("%Y-%m-%d")].append(time_slot.strftime("%H:%M"))
+                else:
+                    if is_unavailable_within_day:
+                        print(f"Unavailable time slot: {time_slot.strftime('%H:%M')}")
+                        if time_slot.date() == preferred_start_travel_date.date():
+                            if last_unavailable_end_time is None or time_slot.time() > last_unavailable_end_time.time():
+                                
+                                last_unavailable_end_time = time_slot
+                               
+                        elif time_slot.date() == preferred_end_travel_date.date():
+                            if first_unavailable_start_time is None or time_slot.time() < first_unavailable_start_time.time():
+                             
+                                first_unavailable_start_time = time_slot
+                    if is_unavailable_within_date_range:
+                        print("within range")
+                    
+                        if first_unavailable_start_time is None or time_slot.time() < first_unavailable_start_time.time():
+                            first_unavailable_start_time = time_slot
+                            print("shesh", time_slot.date())
+                           
             current_date += timedelta(days=1)
+       
+
+        # Now, available_times_by_date contains all available times, excluding those before the first is_unavailable_within_day time
         formatted_available_times = {date: {'available_time': times} for date, times in available_times_by_date.items()}
+        formatted_available_times['unavailable_time_in_date_range'] = unavailable_times
         return Response(formatted_available_times)
 
     def generate_time_slots(self, start_time, end_time):
@@ -352,22 +392,38 @@ class CheckTimeAvailability(generics.ListAPIView):
         ) | (
             Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
             Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-        ) | (Q(travel_time=preferred_start_travel_time) | Q(return_time=preferred_start_travel_time)) 
-    ).exclude(
-            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gte=preferred_end_travel_time)) |
-            (Q(return_date=preferred_start_travel_date) & Q(return_time__lte=preferred_start_travel_time))
-            
         )
-        return not overlapping_requests.exists()
-    
-    # overlapping_requests = Request.objects.filter(
-    #         Q(travel_date=date, travel_time__lte=time_slot_datetime, return_time__gte=time_slot_datetime) |
-    #         Q(return_date=date, return_time__gte=time_slot_datetime)
-    #     )
-    
- 
+        ).exclude(
+            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
+        )
+      
+        is_available = not overlapping_requests.exists()
 
+        overlapping_date_range = Request.objects.filter(
+             # Request spans the entire day
+            Q(travel_date=date, travel_time__lte=time_slot_time)# Request ends on the same day after the time slot
+        )
 
+        is_available_overlapping_date_range = not overlapping_date_range.exists()
+    
+        # Determine if the unavailable time is within a single day and does not overflow
+        # This is a conceptual approach; you'll need to adjust it based on your specific logic
+        is_unavailable_within_day = False # Placeholder; replace with actual logic
+        if not is_available:
+            # Example logic to check if the unavailable time does not overflow to the next day
+            # This assumes that 'travel_time' and 'return_time' are datetime fields
+            for request in overlapping_requests:
+                if request.travel_date == request.return_date:
+                    is_unavailable_within_day = True
+                    break
+
+        is_unavailable_within_date_range = False
+        if not is_available_overlapping_date_range:
+            is_unavailable_within_date_range = True
+        
+        return is_available, is_unavailable_within_day, is_unavailable_within_date_range
+    
 
 class VehicleSchedulesView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
