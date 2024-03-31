@@ -186,8 +186,8 @@ class VehicleEachSchedule(generics.ListAPIView):
             model = vehicle.model
             capacity = vehicle.capacity
             type = vehicle.type
-            driver_assigned_to = vehicle.driver_assigned_to.id
-            vip_assigned_to = vehicle.vip_assigned_to.id if vehicle.vip_assigned_to else None
+            driver_assigned_to = vehicle.driver_assigned_to.username
+            vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
             image_url = vehicle.image.url if vehicle.image else None
 
             requests_by_vehicle[vehicle.plate_number] = {
