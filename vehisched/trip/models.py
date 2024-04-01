@@ -17,6 +17,7 @@ class Trip(models.Model):
     qr_code_data = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     tripticket_pdf = models.FileField(upload_to='documents/', null=True, blank=True)
+    requestform_pdf = models.FileField(upload_to='documents/', null=True, blank=True)
 
 @receiver(post_migrate)
 def create_periodic_tasks(sender, **kwargs):

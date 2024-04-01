@@ -1,4 +1,4 @@
-from rest_framework import generics, status, mixins
+from rest_framework import generics, status
 from rest_framework.response import Response
 from .models import Request, Type, Vehicle_Driver_Status, Question, Answer, AddressFromGoogleMap
 from trip.models import Trip
@@ -16,12 +16,15 @@ import datetime as timedate
 from datetime import datetime
 from django.utils import timezone
 from dateutil.parser import parse
+from django.conf import settings
 import fitz
 import qrcode
 import ast
 import re
 from dotenv import load_dotenv
 import os
+
+MEDIA_ROOT = settings.MEDIA_ROOT
 
 load_dotenv()
 
@@ -196,7 +199,16 @@ class RequestListCreateView(generics.ListCreateAPIView):
         travel_date_converted = datetime.strptime(travel_date, '%Y-%m-%d').date()
         travel_time_converted = datetime.strptime(travel_time, '%H:%M').time()
         return_date_converted = datetime.strptime(return_date, '%Y-%m-%d').date()
-        return_time_converted = datetime.strptime(return_time, '%H:%M').time()
+        # Check if the string contains seconds
+        if len(return_time.split(':')) > 2:
+            # If the string contains seconds, remove them
+            return_time_without_seconds = ':'.join(return_time.split(':')[:2])
+        else:
+            # If the string does not contain seconds, use it as is
+            return_time_without_seconds = return_time
+
+        # Convert the string to a datetime object, excluding seconds if present
+        return_time_converted = datetime.strptime(return_time_without_seconds, '%H:%M').time()
 
         travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
         travel_datetime = timezone.make_aware(travel_datetime)
@@ -241,9 +253,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
             ).exists():
                 error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
                 return Response({'error': error_message}, status=400)
-        
-            
-            
+
             unavailable_driver = Request.objects.filter(
                 (
                     Q(travel_date__range=[travel_date, travel_date]) &
@@ -400,8 +410,20 @@ class RequestListCreateView(generics.ListCreateAPIView):
                                 }
                             )
                         filtered_requests.update(status='Awaiting Vehicle Alteration')
+                
                 travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
                 travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                return_date_obj = datetime.strptime(new_request.return_date, '%Y-%m-%d')
+
+                return_date_formatted = return_date_obj.strftime('%m/%d/%Y')
+                if len(return_time.split(':')) > 2:
+                    return_time_without_seconds = ':'.join(return_time.split(':')[:2])
+                else:
+                    return_time_without_seconds = return_time
+
+                return_time_obj = datetime.strptime(return_time_without_seconds, '%H:%M')
+
+                return_time_formatted = return_time_obj.strftime('%I:%M %p')
                 destination = new_request.destination.split(',', 1)[0]
 
                 async_to_sync(channel_layer.group_send)(
@@ -418,21 +440,49 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 )
                 notification.save()
 
+                requester_contact_number = new_request.requester_name.mobile_number
+                office = new_request.office
+                number_of_passenger = new_request.number_of_passenger
                 
                 driver_name = new_request.driver_name.get_full_name()
                 vehicle_plate_number = new_request.vehicle.plate_number
                 vehicle_model = new_request.vehicle.model
                 requester_name = new_request.requester_name.get_full_name()
-                
-                destination = destination
+              
+                destination_for_docs = new_request.destination
                 purpose = new_request.purpose
-                if(new_request.date_reserved):
-                    formatted_datereserved = timedate.datetime.strftime(new_request.date_reserved, "%m/%d/%Y, %I:%M %p")
+                if new_request.date_reserved:
+                    formatted_datereserved = new_request.date_reserved.strftime("%m/%d/%Y")
+                if len(destination_for_docs) > 85:
+                    index = 85 - 3
+                    
+                    index = min(index, len(destination_for_docs) - 1)
+            
+                    destination_for_docs = destination_for_docs[:index] + "......"
 
-                passenger_name_list = new_request.passenger_name
-
+                passenger_name_list = new_request.passenger_name  
                 passenger_names_string = ", ".join(passenger_name_list)
 
+        
+                if len(passenger_names_string) > 85:
+                
+                    index = 85 - 3 - 2
+            
+                    index = min(index, len(passenger_names_string) - 1)
+                    
+                    passenger_names_string = passenger_names_string[:index] + "......"
+                
+                purpose_tripticket = new_request.purpose
+
+                if len(purpose_tripticket) > 100:
+                    
+                    index = 100 - 3
+                
+                    index = min(index, len(purpose_tripticket) - 1)
+                    
+                    purpose_tripticket = purpose_tripticket[:index] + "......"
+
+                #TRIPTICKET 
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -448,29 +498,64 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                 pixmap = fitz.Pixmap("temp.png")
 
-                doc = fitz.open('media/documents/tripticket.pdf')
-                page = doc[0] 
+                tripticket_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/tripticket.pdf'))
+                page = tripticket_doc[0] 
 
-                text_annotations = {
+                tripticket_text_annotations = {
                     driver_name: [220, 142],
-                    vehicle_plate_number +" " + vehicle_model: [220, 152],
-                    requester_name+", " + passenger_names_string: [220, 160],
-                    destination: [220, 170],
-                    purpose: [130, 180],
-                    formatted_datereserved: [450, 80]
+                    vehicle_plate_number +" " + vehicle_model: [220, 153],
+                    requester_name+", " + passenger_names_string: [220, 161],
+                    destination_for_docs: [220, 171],
+                    purpose_tripticket: [130, 180],
+                    travel_date_formatted: [450, 80]
                 }
                 rect = fitz.Rect(520, 20, 570, 70)  
                 page.insert_image(rect, pixmap=pixmap)
 
-                for text, coordinates in text_annotations.items():
-                    page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
+                for text, coordinates in tripticket_text_annotations.items():
+                    page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
 
-                doc.save(f"media/documents/tripticket{new_request.request_id}.pdf")
-                doc.close()
+                tripticket_doc.save(os.path.join(MEDIA_ROOT, f"documents/tripticket{new_request.request_id}.pdf"))
+                tripticket_doc.close()
                 os.remove("temp.png")
                 
                 trip.qr_code_data = new_request.request_id
                 trip.tripticket_pdf = f"documents/tripticket{new_request.request_id}.pdf"
+                trip.save()
+
+                #REQUEST FORM
+                requestform_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/requestform.pdf'))
+                page = requestform_doc[0]
+
+                base_coordinates_first_part = [80, 211]
+                base_coordinates_second_part = [80, 223]
+
+                first_part_of_purpose = purpose[:104]
+                second_part_of_purpose = purpose[104:]
+
+                requestform_text_annotations = {
+                    str(formatted_datereserved): [185, 135],
+                    str(requester_name): [185, 145],
+                    str(office): [445, 145],
+                    str(number_of_passenger): [190, 157],
+                    "0"+str(requester_contact_number): [445, 155],
+                    str(passenger_names_string): [185, 168],
+                    str(destination_for_docs): [185, 178],
+                    str(travel_date_formatted) +" to " + str(return_date_formatted): [185, 190],
+                    str(travel_time_formatted) +" to " + str(return_time_formatted): [445, 190],
+                    str(first_part_of_purpose): base_coordinates_first_part,
+                    str(second_part_of_purpose): base_coordinates_second_part,
+                    str(driver_name): [185, 233],
+                    str(vehicle_plate_number) + " " + str(vehicle_model): [438, 233]
+                }
+
+                for text, coordinates in requestform_text_annotations.items():
+                    page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
+
+                requestform_doc.save(os.path.join(MEDIA_ROOT, f"documents/requestform{new_request.request_id}.pdf"))
+                requestform_doc.close()
+
+                trip.requestform_pdf = f"documents/requestform{new_request.request_id}.pdf"
                 trip.save()
 
             
@@ -1010,6 +1095,9 @@ class RequestApprovedView(generics.UpdateAPIView):
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
         travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
         travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        return_date_formatted = instance.return_date.strftime('%m/%d/%Y')
+        instance.return_time = instance.return_time.replace(second=0)
+        return_time_formatted = instance.return_time.strftime('%I:%M %p')
         destination = instance.destination.split(',', 1)[0]
 
         async_to_sync(channel_layer.group_send)(
@@ -1026,6 +1114,9 @@ class RequestApprovedView(generics.UpdateAPIView):
         )
         notification.save()
 
+        requester_contact_number = instance.requester_name.mobile_number
+        office = instance.office
+        number_of_passenger = instance.number_of_passenger
         
         driver_name = instance.driver_name.get_full_name()
         vehicle_plate_number = instance.vehicle.plate_number
@@ -1034,14 +1125,38 @@ class RequestApprovedView(generics.UpdateAPIView):
         passenger_name = instance.passenger_name
         destination = instance.destination
         purpose = instance.purpose
-        if(instance.date_reserved):
-            formatted_datereserved = timedate.datetime.strftime(instance.date_reserved, "%m/%d/%Y, %I:%M %p")
-
+        if instance.date_reserved:
+            formatted_datereserved = instance.date_reserved.strftime("%m/%d/%Y")
+        if len(destination) > 85:
+            index = 85 - 3
             
+            index = min(index, len(destination) - 1)
+       
+            destination = destination[:index] + "......"
 
         passenger_name_list = ast.literal_eval(passenger_name)  
         passenger_names_string = ", ".join(passenger_name_list)
 
+ 
+        if len(passenger_names_string) > 85:
+           
+            index = 85 - 3 - 2
+       
+            index = min(index, len(passenger_names_string) - 1)
+            
+            passenger_names_string = passenger_names_string[:index] + "......"
+        
+        purpose_tripticket = instance.purpose
+
+        if len(purpose_tripticket) > 100:
+            
+            index = 100 - 3
+         
+            index = min(index, len(purpose_tripticket) - 1)
+            
+            purpose_tripticket = purpose_tripticket[:index] + "......"
+
+        #TRIPTICKET 
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -1057,29 +1172,64 @@ class RequestApprovedView(generics.UpdateAPIView):
 
         pixmap = fitz.Pixmap("temp.png")
 
-        doc = fitz.open('media/documents/tripticket.pdf')
-        page = doc[0] 
+        tripticket_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/tripticket.pdf'))
+        page = tripticket_doc[0] 
 
-        text_annotations = {
+        tripticket_text_annotations = {
             driver_name: [220, 142],
-            vehicle_plate_number +" " + vehicle_model: [220, 152],
-            requester_name+", " + passenger_names_string: [220, 160],
-            destination: [220, 170],
-            purpose: [130, 180],
-            formatted_datereserved: [450, 80]
+            vehicle_plate_number +" " + vehicle_model: [220, 153],
+            requester_name+", " + passenger_names_string: [220, 161],
+            destination: [220, 171],
+            purpose_tripticket: [130, 180],
+            travel_date_formatted: [450, 80]
         }
         rect = fitz.Rect(520, 20, 570, 70)  
         page.insert_image(rect, pixmap=pixmap)
 
-        for text, coordinates in text_annotations.items():
-            page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
+        for text, coordinates in tripticket_text_annotations.items():
+            page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
 
-        doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
-        doc.close()
+        tripticket_doc.save(os.path.join(MEDIA_ROOT, f"documents/tripticket{instance.request_id}.pdf"))
+        tripticket_doc.close()
         os.remove("temp.png")
         
         trip.qr_code_data = instance.request_id
         trip.tripticket_pdf = f"documents/tripticket{instance.request_id}.pdf"
+        trip.save()
+
+        #REQUEST FORM
+        requestform_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/requestform.pdf'))
+        page = requestform_doc[0]
+
+        base_coordinates_first_part = [80, 211]
+        base_coordinates_second_part = [80, 223]
+
+        first_part_of_purpose = purpose[:104]
+        second_part_of_purpose = purpose[104:]
+
+        requestform_text_annotations = {
+            str(formatted_datereserved): [185, 135],
+            str(requester_name): [185, 145],
+            str(office): [445, 145],
+            str(number_of_passenger): [190, 157],
+            "0"+str(requester_contact_number): [445, 155],
+            str(passenger_names_string): [185, 168],
+            str(destination): [185, 178],
+            str(travel_date_formatted) +" to " + str(return_date_formatted): [185, 190],
+            str(travel_time_formatted) +" to " + str(return_time_formatted): [445, 190],
+            str(first_part_of_purpose): base_coordinates_first_part,
+            str(second_part_of_purpose): base_coordinates_second_part,
+            str(driver_name): [185, 233],
+            str(vehicle_plate_number) + " " + str(vehicle_model): [438, 233]
+        }
+
+        for text, coordinates in requestform_text_annotations.items():
+            page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
+
+        requestform_doc.save(os.path.join(MEDIA_ROOT, f"documents/requestform{instance.request_id}.pdf"))
+        requestform_doc.close()
+
+        trip.requestform_pdf = f"documents/requestform{instance.request_id}.pdf"
         trip.save()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
