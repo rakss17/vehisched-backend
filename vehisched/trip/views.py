@@ -317,21 +317,37 @@ class CheckTimeAvailability(generics.ListAPIView):
             available_times_by_date[current_date.strftime("%Y-%m-%d")] = []
             first_unavailable_start_time = None
             last_unavailable_end_time = None
+            unavailable_within_date_range = None
             
         
             for time_slot in time_slots:
                 is_available, is_unavailable_within_day, is_unavailable_within_date_range = self.is_time_slot_available(time_slot, current_date)
+                
+                if is_unavailable_within_date_range:
+                    print("triggering")                                                     #DIRI KO NAG STOP
+                    if unavailable_within_date_range is None or preferred_start_travel_date.date() <= unavailable_within_date_range.date(): 
+                        if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
+                            print("datee", unavailable_within_date_range.date())
+                            unavailable_times['unavailable_time_in_date_range'].append(unavailable_within_date_range.date())
+                            continue
+                if last_unavailable_end_time is not None and time_slot.time() < last_unavailable_end_time.time():
+                        continue
+                if first_unavailable_start_time is not None and time_slot.time() > first_unavailable_start_time.time():
+                        continue 
                 if is_available:
                     
                     if last_unavailable_end_time is not None and time_slot.time() < last_unavailable_end_time.time():
-                    
                         continue
                     
-                    if first_unavailable_start_time is not None and time_slot.time() > first_unavailable_start_time.time():
-                   
-                        print("datee", first_unavailable_start_time.date())
-                        unavailable_times['unavailable_time_in_date_range'].append(first_unavailable_start_time.date())
-                        continue 
+                    
+
+                    # if is_unavailable_within_date_range:
+                    #     if preferred_start_travel_date != preferred_end_travel_date:
+                    #         if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
+                    #             print("datee", unavailable_within_date_range.date())
+                    #             unavailable_times['unavailable_time_in_date_range'].append(unavailable_within_date_range.date())
+                    #             continue
+                        
                    
                     available_times_by_date[current_date.strftime("%Y-%m-%d")].append(time_slot.strftime("%H:%M"))
                 else:
@@ -348,9 +364,9 @@ class CheckTimeAvailability(generics.ListAPIView):
                                 first_unavailable_start_time = time_slot
                     if is_unavailable_within_date_range:
                         print("within range")
-                    
-                        if first_unavailable_start_time is None or time_slot.time() < first_unavailable_start_time.time():
-                            first_unavailable_start_time = time_slot
+                        
+                        if unavailable_within_date_range is None or time_slot.time() < unavailable_within_date_range.time():
+                            unavailable_within_date_range = time_slot
                             print("shesh", time_slot.date())
                            
             current_date += timedelta(days=1)
@@ -392,7 +408,9 @@ class CheckTimeAvailability(generics.ListAPIView):
         ) | (
             Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
             Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-        )
+        ),
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+            status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
         ).exclude(
             (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
             (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
@@ -402,7 +420,7 @@ class CheckTimeAvailability(generics.ListAPIView):
 
         overlapping_date_range = Request.objects.filter(
              # Request spans the entire day
-            Q(travel_date=date, travel_time__lte=time_slot_time)# Request ends on the same day after the time slot
+            Q(travel_date=date, travel_time__lte=time_slot_time) 
         )
 
         is_available_overlapping_date_range = not overlapping_date_range.exists()
@@ -423,6 +441,42 @@ class CheckTimeAvailability(generics.ListAPIView):
             is_unavailable_within_date_range = True
         
         return is_available, is_unavailable_within_day, is_unavailable_within_date_range
+    
+class CheckScheduleConflictsForOneway(generics.ListAPIView):
+    def get(self, request, *args, **kwargs):
+        preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
+        preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
+        preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
+        preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+
+        schedule_conflicts = Request.objects.filter(
+        (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+        ) | (
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+        ) | (
+            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+        ),
+            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+            status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
+        ).exclude(
+            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
+            (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
+        )
+        if schedule_conflicts.exists():
+            error_message = "There's a conflict with your estimated return date and time. Please change your travel date and then re-enter your destination. Thank you!"
+            return Response({'error': error_message}, status=400)
+        else: 
+            return Response({"success"})
     
 
 class VehicleSchedulesView(generics.ListAPIView):

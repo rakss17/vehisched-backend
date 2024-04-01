@@ -193,6 +193,20 @@ class RequestListCreateView(generics.ListCreateAPIView):
         role = request.data['role']
         merge_trip = request.data['merge_trip']
 
+        travel_date_converted = datetime.strptime(travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(return_date, '%Y-%m-%d').date()
+        return_time_converted = datetime.strptime(return_time, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "Please check the travel date and time, it may be after the return date and time"
+            return Response({'error': error_message}, status=400)
+
         if role == 'office staff' and not merge_trip:
             requester_name = User.objects.get(id=request.data['requester_name'])
             driver = User.objects.get(id=request.data['driver_name'])
