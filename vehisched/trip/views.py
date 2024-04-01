@@ -954,3 +954,14 @@ def download_tripticket(request, request_id):
     response['Content-Disposition'] = f'attachment; filename="tripticket{request_id}.pdf"'
 
     return response
+
+def download_printedform(request, request_id):
+    trip = Trip.objects.get(request_id=request_id)
+
+    pdf_path = trip.requestform_pdf.path
+
+    response = FileResponse(open(pdf_path, 'rb'), content_type='application/pdf')
+
+    response['Content-Disposition'] = f'attachment; filename="requestform{request_id}.pdf"'
+
+    return response
