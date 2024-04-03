@@ -486,6 +486,7 @@ class CheckScheduleConflictsForOneway(generics.ListAPIView):
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
         preferred_end_travel_time = self.request.GET.get('preferred_end_travel_time')
+        selected_vehicle = self.request.GET.get("selected_vehicle")
 
         schedule_conflicts = Request.objects.filter(
         (
@@ -504,6 +505,7 @@ class CheckScheduleConflictsForOneway(generics.ListAPIView):
             Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
             Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
         ),
+            vehicle=selected_vehicle,
             vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
             status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
         ).exclude(
