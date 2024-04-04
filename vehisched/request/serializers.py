@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Request, Question, Answer
 from vehicle.models import Vehicle
 from django.utils.timezone import localtime
-import pytz
+import pytz, re
 
 class RequestSerializer(serializers.ModelSerializer):
     driver_full_name = serializers.SerializerMethodField()
@@ -35,11 +35,6 @@ class RequestSerializer(serializers.ModelSerializer):
             vehicle_driver_status = vehicle_driver_status.status
             return vehicle_driver_status
         return None
-    class Meta:
-        model = Request
-        fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
-                  'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
-                  'driver_mobile_number','distance', 'vehicle_driver_status', 'main_merge']
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         if instance.purpose is None and instance.vehicle is not None:
@@ -55,7 +50,22 @@ class RequestSerializer(serializers.ModelSerializer):
 
                 # add other fields as needed
             }
+        if 'passenger_name' in representation:
+       
+            passenger_names_str = representation['passenger_name']
+            
+            passenger_names_str = re.sub(r"[^a-zA-Z0-9 ,]", "", passenger_names_str)
+            passenger_names = passenger_names_str.split(', ')
+            formatted_passenger_names = ", ".join(passenger_names)
+            
+            representation['passenger_name'] = formatted_passenger_names
         return representation
+    class Meta:
+        model = Request
+        fields = ['request_id', 'travel_date', 'travel_time', 'return_date', 'return_time','destination', 'office', 
+                  'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'date_reserved', 'driver_full_name', 'type', 
+                  'driver_mobile_number','distance', 'vehicle_driver_status', 'main_merge']
+    
 
 class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     requester_full_name = serializers.SerializerMethodField()
@@ -134,6 +144,16 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     
     def to_representation(self, instance):
         representation = super().to_representation(instance)
+        
+        if 'passenger_name' in representation:
+       
+            passenger_names_str = representation['passenger_name']
+            
+            passenger_names_str = re.sub(r"[^a-zA-Z0-9 ,]", "", passenger_names_str)
+            passenger_names = passenger_names_str.split(', ')
+            formatted_passenger_names = ", ".join(passenger_names)
+            
+            representation['passenger_name'] = formatted_passenger_names
 
         date_reserved = localtime(instance.date_reserved, pytz.timezone('Asia/Manila'))
         representation['date_reserved'] = date_reserved.isoformat()
