@@ -981,6 +981,11 @@ class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
 
     def list(self, request, *args, **kwargs):
+        office_staff_role = Role.objects.get(role_name='office staff')
+        office_staff_users = User.objects.filter(role=office_staff_role)
+        for user in office_staff_users:
+            Notification.objects.filter(owner=user).update(read_status=True)
+            
         status_filter = request.GET.get('status_filter', None)
         search_query = request.GET.get('search', None)
         queryset = Request.objects.all()
