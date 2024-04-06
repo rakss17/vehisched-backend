@@ -20,6 +20,7 @@ from django.conf import settings
 import fitz
 import qrcode
 import ast
+from django.core.paginator import Paginator
 import re
 from dotenv import load_dotenv
 import os
@@ -976,20 +977,38 @@ class AnswerListCreateView(generics.ListCreateAPIView):
 
         return Response(status=status.HTTP_201_CREATED)
 
-
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
-    queryset = Request.objects.all()
 
     def list(self, request, *args, **kwargs):
-        office_staff_role = Role.objects.get(role_name='office staff')
-        office_staff_users = User.objects.filter(role=office_staff_role)
+        status_filter = request.GET.get('status_filter', None)
+        search_query = request.GET.get('search', None)
+        queryset = Request.objects.all()
 
-        for user in office_staff_users:
-            Notification.objects.filter(owner=user).update(read_status=True)
-            
-        return super().list(request, *args, **kwargs)
+        
+        if status_filter and status_filter.lower() != "all": 
+            queryset = queryset.filter(status=status_filter)
 
+        if search_query:
+            queryset = queryset.filter(
+                Q(requester_name__first_name__icontains=search_query) |
+                Q(requester_name__last_name__icontains=search_query) |
+                Q(requester_name__username__icontains=search_query) |
+                Q(office__icontains=search_query)
+            )
+       
+        page_size = 10 
+        page_number = request.GET.get('page', 1) 
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page_number)
+
+       
+        serializer = self.serializer_class(page_obj.object_list, many=True)
+      
+        return Response({
+            'data': serializer.data,
+            'next_page': page_obj.has_next() and page_obj.next_page_number() or None,
+        }, status=status.HTTP_200_OK)
  
 class RequestReschedule(generics.UpdateAPIView):
     queryset = Request.objects.all()
