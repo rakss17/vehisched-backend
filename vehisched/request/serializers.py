@@ -146,8 +146,10 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         
         if 'passenger_name' in representation:
-       
             passenger_names_str = representation['passenger_name']
+            
+            if not isinstance(passenger_names_str, str):
+                passenger_names_str = str(passenger_names_str)
             
             passenger_names_str = re.sub(r"[^a-zA-Z0-9 ,]", "", passenger_names_str)
             passenger_names = passenger_names_str.split(', ')
@@ -166,24 +168,14 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
                   'office', 'number_of_passenger', 'passenger_name', 'purpose', 'status', 'vehicle', 'vehicle_model', 'date_reserved', 'driver_full_name', 
                   'type', 'distance', 'vehicle_driver_status', 'departure_time_from_office', 'arrival_time_to_office', 'driver_id', 'vehicle_capacity', 'merged_with', 'main_merge']
 
-# class AnswerSerializer(serializers.ModelSerializer):
-#    class Meta:
-#        model = Answer
-#        fields = ['content']
+
 
 class QuestionSerializer(serializers.ModelSerializer):
-#    answers = AnswerSerializer(many=True)
 
    class Meta:
        model = Question
        fields = ['question_number', 'content']
 
-#    def create(self, validated_data):
-#        answers_data = validated_data.pop('answers')
-#        question = Question.objects.create(**validated_data)
-#        for answer_data in answers_data:
-#            Answer.objects.create(question=question, **answer_data)
-#        return question
 
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
@@ -197,15 +189,3 @@ class Question2Serializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ['question_number', 'question', ]
-
-
-
-    # def create(self, validated_data):
-    #     questions_data = validated_data.pop('question')
-    #     csm = CSM.objects.create(**validated_data)
-    #     for question_data in questions_data:
-    #         answers_data = question_data.pop('answers')
-    #         question = Question.objects.get(question_number=question_data['question_number'])
-    #         for answer_data in answers_data:
-    #             Answer.objects.create(question=question, **answer_data)
-    #     return csm
