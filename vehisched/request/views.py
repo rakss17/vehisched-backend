@@ -985,23 +985,36 @@ class RequestListOfficeStaffView(generics.ListAPIView):
         office_staff_users = User.objects.filter(role=office_staff_role)
         for user in office_staff_users:
             Notification.objects.filter(owner=user).update(read_status=True)
-            
+
         status_filter = request.GET.get('status_filter', None)
         search_query = request.GET.get('search', None)
+        timezone.activate('Asia/Manila')
+        current_date = timezone.now()
         queryset = Request.objects.all()
 
+        if status_filter and status_filter.lower() == "all":
+            queryset = queryset.filter(Q(travel_date__gte=current_date.date()))
         
-        if status_filter and status_filter.lower() != "all": 
-            queryset = queryset.filter(status=status_filter)
+        if status_filter and status_filter.lower() != "all" and status_filter.lower() != "logs":
+            queryset = queryset.filter(
+                Q(status=status_filter) & Q(travel_date__gte=current_date.date())
+            )
 
+        if status_filter and status_filter.lower() == "logs":
+            queryset = queryset.filter(
+                Q(return_date__lt=current_date)
+            )
+            
         if search_query:
             queryset = queryset.filter(
                 Q(requester_name__first_name__icontains=search_query) |
                 Q(requester_name__last_name__icontains=search_query) |
                 Q(requester_name__username__icontains=search_query) |
-                Q(office__icontains=search_query)
+                Q(office__icontains=search_query) |
+                Q(purpose__icontains=search_query)
             )
        
+        queryset = queryset.order_by('travel_date')
         page_size = 10 
         page_number = request.GET.get('page', 1) 
         paginator = Paginator(queryset, page_size)
