@@ -1,6 +1,6 @@
 from rest_framework import generics
 from .models import Vehicle, OnProcess
-from .serializers import VehicleSerializer, VehicleEachScheduleSerializer
+from .serializers import VehicleSerializer
 from request.views import RequestOfficeStaffSerializer
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +9,7 @@ from rest_framework.exceptions import PermissionDenied
 from django.db.models import Q
 from request.models import Request
 from django.utils import timezone
-import base64
+from django.core.paginator import Paginator
 
 class VehicleListCreateView(generics.ListCreateAPIView):
 
@@ -166,11 +166,17 @@ class VehicleEachSchedule(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
 
     def get(self, request, *args, **kwargs):
+        
+        page_size = 3 
+        page_number = request.GET.get('page', 1) 
+
         vehicles = Vehicle.objects.all()
+        paginator = Paginator(vehicles, page_size)
+        page_obj = paginator.get_page(page_number)
 
         requests_by_vehicle = {}
 
-        for vehicle in vehicles:
+        for vehicle in page_obj:
             queryset = Request.objects.filter(
                 vehicle=vehicle, 
                 status__in=[
@@ -180,7 +186,9 @@ class VehicleEachSchedule(generics.ListAPIView):
                     'Vehicle Maintenance'
                 ]
             )
+            
             serializer = self.serializer_class(queryset, many=True)
+
             vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
             plate_number = vehicle.plate_number
             model = vehicle.model
@@ -202,5 +210,8 @@ class VehicleEachSchedule(generics.ListAPIView):
                 'schedules': serializer.data,
             }
 
-        return Response(requests_by_vehicle)
+        return Response({
+            'data': requests_by_vehicle,
+            'next_page': page_obj.has_next() and page_obj.next_page_number() or None,
+        }, status=status.HTTP_200_OK)
     
