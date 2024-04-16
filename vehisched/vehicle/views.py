@@ -167,13 +167,13 @@ class VehicleEachSchedule(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         
-        page_size = 3 
+        page_size = 2 
         page_number = request.GET.get('page', 1) 
 
         vehicles = Vehicle.objects.all()
         paginator = Paginator(vehicles, page_size)
         page_obj = paginator.get_page(page_number)
-
+        timezone.activate('Asia/Manila')
         requests_by_vehicle = {}
 
         for vehicle in page_obj:
@@ -184,11 +184,12 @@ class VehicleEachSchedule(generics.ListAPIView):
                     'Approved - Alterate Vehicle', 
                     'Awaiting Vehicle Alteration', 
                     'Vehicle Maintenance'
-                ]
+                ],
+                travel_date__gte=timezone.now().date()
             )
             
             serializer = self.serializer_class(queryset, many=True)
-
+            
             vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
             plate_number = vehicle.plate_number
             model = vehicle.model
