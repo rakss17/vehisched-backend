@@ -196,6 +196,7 @@ class VehicleEachSchedule(generics.ListAPIView):
             capacity = vehicle.capacity
             type = vehicle.type
             driver_assigned_to = vehicle.driver_assigned_to.username
+            is_vip = vehicle.is_vip
             vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
             image_url = vehicle.image.url if vehicle.image else None
 
@@ -208,6 +209,7 @@ class VehicleEachSchedule(generics.ListAPIView):
                 'image': image_url,
                 'driver_assigned_to': driver_assigned_to,
                 'vip_assigned_to': vip_assigned_to, 
+                'is_vip': is_vip,
                 'schedules': serializer.data,
             }
 

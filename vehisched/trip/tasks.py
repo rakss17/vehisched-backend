@@ -7,6 +7,8 @@ from .models import Trip
 from request.models import Request
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from django.conf import settings
+from django.core.mail import send_mail
 
 @shared_task()
 def check_travel_dates():
@@ -46,6 +48,11 @@ def check_travel_dates():
                     purpose=trip.trip_id
                 )
                 notification.save()
+                subject='Request Approval'
+                from_email = settings.EMAIL_HOST_USER
+                to_email = request_data.requester_name.email
+
+                send_mail(subject, notification.subject, from_email, [to_email])
                             
         if time_zone >= travel_datetime - timedelta(hours=12):
             existing_notification = Notification.objects.filter(

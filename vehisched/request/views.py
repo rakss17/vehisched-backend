@@ -24,6 +24,7 @@ from django.core.paginator import Paginator
 import re
 from dotenv import load_dotenv
 import os
+from django.core.mail import send_mail
 
 MEDIA_ROOT = settings.MEDIA_ROOT
 
@@ -309,6 +310,17 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     owner=self.request.user,
                     subject=f"A new request has been submitted by {self.request.user}" )
                 notification.save()
+                travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
+                return_time_formatted = new_request.return_time.strftime('%I:%M %p')
+
+                subject='Request Approval'
+                message=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
+                from_email = settings.EMAIL_HOST_USER
+                to_email = new_request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
@@ -348,6 +360,18 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     owner=self.request.user,
                     subject=f"A new request has been submitted by {self.request.user}")
                 notification.save()
+
+                travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
+                return_time_formatted = new_request.return_time.strftime('%I:%M %p')
+
+                subject='Request Approval'
+                message=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
+                from_email = settings.EMAIL_HOST_USER
+                to_email = new_request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
@@ -410,6 +434,12 @@ class RequestListCreateView(generics.ListCreateAPIView):
                                     'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                                 }
                             )
+                            subject='Vehicle Alteration'
+                            message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                            from_email = settings.EMAIL_HOST_USER
+                            to_email = requestt.requester_name.email
+
+                            send_mail(subject, message, from_email, [to_email])
                         filtered_requests.update(status='Awaiting Vehicle Alteration')
                 
                 travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
@@ -1129,6 +1159,12 @@ class RequestApprovedView(generics.UpdateAPIView):
                             'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                         }
                     )
+                    subject='Vehicle Alteration'
+                    message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                    from_email = settings.EMAIL_HOST_USER
+                    to_email = requestt.requester_name.email
+
+                    send_mail(subject, message, from_email, [to_email])
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
         travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
         travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
@@ -1150,6 +1186,12 @@ class RequestApprovedView(generics.UpdateAPIView):
             subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
         )
         notification.save()
+        
+        subject='Request Approval'
+        from_email = settings.EMAIL_HOST_USER
+        to_email = instance.requester_name.email
+
+        send_mail(subject, notification.subject, from_email, [to_email])
 
         requester_contact_number = instance.requester_name.mobile_number
         office = instance.office
@@ -1495,28 +1537,13 @@ class VehicleMaintenance(generics.CreateAPIView):
                         'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
                     }
                 )
+                subject='Vehicle Maintenance'
+                message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                from_email = settings.EMAIL_HOST_USER
+                to_email = request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
             filtered_requests.update(status='Awaiting Vehicle Alteration')
-
-            
-
-
-            
-
-
-
-    #     notification = Notification(
-    #         owner=self.request.user,
-    #         subject=f"Request {new_request.request_id} has been created",
-    #     )
-    #     notification.save()
-
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A new request has been created by {self.request.user}",
-    #     }
-    # )
         
        
         return Response(RequestSerializer(new_request).data, status=201)
