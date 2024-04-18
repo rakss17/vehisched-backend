@@ -307,6 +307,7 @@ class CheckTimeAvailability(generics.ListAPIView):
         preferred_start_travel_date = datetime.strptime(self.request.GET.get('preferred_start_travel_date'), "%Y-%m-%d")
         preferred_end_travel_date = datetime.strptime(self.request.GET.get('preferred_end_travel_date'), "%Y-%m-%d")
         selected_vehicle = self.request.GET.get("selected_vehicle")
+        role = self.request.GET.get("role")
 
         available_times_by_date = {}
         current_date = preferred_start_travel_date
@@ -322,7 +323,7 @@ class CheckTimeAvailability(generics.ListAPIView):
             
         
             for time_slot in time_slots:
-                is_available, is_unavailable_within_day, is_unavailable_within_date_range = self.is_time_slot_available(time_slot, current_date, selected_vehicle)
+                is_available, is_unavailable_within_day, is_unavailable_within_date_range = self.is_time_slot_available(time_slot, current_date, selected_vehicle, role)
                 
                 if is_unavailable_within_date_range:
                     print("triggering")                                                     #DIRI KO NAG STOP
@@ -413,72 +414,136 @@ class CheckTimeAvailability(generics.ListAPIView):
         
         return time_slots
 
-    def is_time_slot_available(self, time_slot, date, selected_vehicle):
+    def is_time_slot_available(self, time_slot, date, selected_vehicle, role):
         time_slot_time = time_slot.time()
         time_slot_datetime = datetime.combine(date, time_slot_time)
         preferred_start_travel_date = date 
         preferred_end_travel_date = date 
         preferred_start_travel_time = time_slot_time 
         preferred_end_travel_time = time_slot_time
-        overlapping_requests = Request.objects.filter(
-        (
-            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-        ) | (
-            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
-            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-        ) | (
-            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-            Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
-        ) | (
-            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-            Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
-        ) | (
-            Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
-            Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
-        ),
-            vehicle=selected_vehicle,
-            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-            status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
-        ).exclude(
-            (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
-            (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
-        )
-      
-        is_available = not overlapping_requests.exists()
-        overlapping_date_range = Request.objects.filter(
-             # Request spans the entire day
-            Q(travel_date=date, travel_time__lte=time_slot_time) 
-            # Q(travel_date=date, return_time__lte=time_slot_time)
-        #     (
-        #     Q(travel_date=date) &
-        #     Q(travel_time__gte=time_slot_time) &
-        #     Q(return_time__lte=time_slot_time)
-        # ) | (
-        #     Q(return_date=date) &
-        #     Q(return_time__lte=time_slot_time) &
-        #     Q(travel_time__gte=time_slot_time)
-        # )
-        )
-
-        is_available_overlapping_date_range = not overlapping_date_range.exists()
-    
-        # Determine if the unavailable time is within a single day and does not overflow
-        # This is a conceptual approach; you'll need to adjust it based on your specific logic
-        is_unavailable_within_day = False # Placeholder; replace with actual logic
-        if not is_available:
-            # Example logic to check if the unavailable time does not overflow to the next day
-            # This assumes that 'travel_time' and 'return_time' are datetime fields
-            for request in overlapping_requests:
-                if request.travel_date == request.return_date:
-                    is_unavailable_within_day = True
-                    break
-
-        is_unavailable_within_date_range = False
-        if not is_available_overlapping_date_range:
-            is_unavailable_within_date_range = True
+        if role == 'requester':
+            overlapping_requests = Request.objects.filter(
+            (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ),
+                vehicle=selected_vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
+            ).exclude(
+                (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
+                (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
+            )
         
-        return is_available, is_unavailable_within_day, is_unavailable_within_date_range
+            is_available = not overlapping_requests.exists()
+            overlapping_date_range = Request.objects.filter(
+                # Request spans the entire day
+                Q(travel_date=date, travel_time__lte=time_slot_time),
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
+                # Q(travel_date=date, return_time__lte=time_slot_time)
+            #     (
+            #     Q(travel_date=date) &
+            #     Q(travel_time__gte=time_slot_time) &
+            #     Q(return_time__lte=time_slot_time)
+            # ) | (
+            #     Q(return_date=date) &
+            #     Q(return_time__lte=time_slot_time) &
+            #     Q(travel_time__gte=time_slot_time)
+            # )
+            )
+
+            is_available_overlapping_date_range = not overlapping_date_range.exists()
+        
+            # Determine if the unavailable time is within a single day and does not overflow
+            # This is a conceptual approach; you'll need to adjust it based on your specific logic
+            is_unavailable_within_day = False # Placeholder; replace with actual logic
+            if not is_available:
+                # Example logic to check if the unavailable time does not overflow to the next day
+                # This assumes that 'travel_time' and 'return_time' are datetime fields
+                for request in overlapping_requests:
+                    if request.travel_date == request.return_date:
+                        is_unavailable_within_day = True
+                        break
+
+            is_unavailable_within_date_range = False
+            if not is_available_overlapping_date_range:
+                is_unavailable_within_date_range = True
+            
+            return is_available, is_unavailable_within_day, is_unavailable_within_date_range
+        
+        elif role == "vip":
+                overlapping_requests = Request.objects.filter(
+            (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) |
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(travel_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_time__range=[preferred_start_travel_time, preferred_end_travel_time])
+            ) | (
+                Q(travel_date__range=[preferred_start_travel_date, preferred_end_travel_date]) &
+                Q(return_date__range=[preferred_start_travel_date, preferred_end_travel_date])
+            ),
+                vehicle=selected_vehicle,
+                vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                status__in=['Ongoing Vehicle Maintenance'],
+            ).exclude(
+                (Q(travel_date=preferred_end_travel_date) & Q(travel_time__gt=preferred_end_travel_time)) |
+                (Q(return_date=preferred_start_travel_date) & Q(return_time__lt=preferred_start_travel_time))     
+            )
+        
+                is_available = not overlapping_requests.exists()
+                overlapping_date_range = Request.objects.filter(
+                    # Request spans the entire day
+                    Q(travel_date=date, travel_time__lte=time_slot_time),
+                    status__in=['Ongoing Vehicle Maintenance'],
+                    # Q(travel_date=date, return_time__lte=time_slot_time)
+                #     (
+                #     Q(travel_date=date) &
+                #     Q(travel_time__gte=time_slot_time) &
+                #     Q(return_time__lte=time_slot_time)
+                # ) | (
+                #     Q(return_date=date) &
+                #     Q(return_time__lte=time_slot_time) &
+                #     Q(travel_time__gte=time_slot_time)
+                # )
+                )
+
+                is_available_overlapping_date_range = not overlapping_date_range.exists()
+            
+                # Determine if the unavailable time is within a single day and does not overflow
+                # This is a conceptual approach; you'll need to adjust it based on your specific logic
+                is_unavailable_within_day = False # Placeholder; replace with actual logic
+                if not is_available:
+                    # Example logic to check if the unavailable time does not overflow to the next day
+                    # This assumes that 'travel_time' and 'return_time' are datetime fields
+                    for request in overlapping_requests:
+                        if request.travel_date == request.return_date:
+                            is_unavailable_within_day = True
+                            break
+
+                is_unavailable_within_date_range = False
+                if not is_available_overlapping_date_range:
+                    is_unavailable_within_date_range = True
+                
+                return is_available, is_unavailable_within_day, is_unavailable_within_date_range
     
 class CheckScheduleConflictsForOneway(generics.ListAPIView):
     def get(self, request, *args, **kwargs):

@@ -66,16 +66,90 @@ class VehicleRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class VehicleForVIPListView(generics.ListCreateAPIView):
-    serializer_class = VehicleSerializer
+    serializer_class = RequestOfficeStaffSerializer
     parser_classes = (MultiPartParser, FormParser)
 
-    def get_queryset(self):
+    def get(self, request, *args, **kwargs):
         user = self.request.user
         print(user)
         role = self.request.GET.get('role')
+        is_another_vehicle = self.request.GET.get('is_another_vehicle')
         if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
-        return Vehicle.objects.filter(vip_assigned_to=user)
+        
+        if is_another_vehicle:
+   
+            filtered_vehicles = Vehicle.objects.all()
+
+            vehicles = {}
+
+            for vehicle in filtered_vehicles:
+                queryset = Request.objects.filter(
+                    vehicle=vehicle, 
+                    status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
+                    travel_date__gte=timezone.now().date()
+                )
+                
+                serializer = self.serializer_class(queryset, many=True)
+                vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
+                plate_number = vehicle.plate_number
+                model = vehicle.model
+                capacity = vehicle.capacity
+                type = vehicle.type
+                driver_assigned_to = vehicle.driver_assigned_to.username
+                is_vip = vehicle.is_vip
+                vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
+                image_url = vehicle.image.url if vehicle.image else None
+
+                vehicles[vehicle.plate_number] = {
+                    'vehicle': vehicle_key,
+                    'plate_number': plate_number,
+                    'model': model,
+                    'capacity': capacity,
+                    'type': type,
+                    'image': image_url,
+                    'driver_assigned_to': driver_assigned_to,
+                    'vip_assigned_to': vip_assigned_to, 
+                    'is_vip': is_vip,
+                    'schedules': serializer.data,
+                }
+            return Response({'data': vehicles }, status=status.HTTP_200_OK)
+        else:
+            filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
+
+            vehicles = {}
+
+            for vehicle in filtered_vehicles:
+                queryset = Request.objects.filter(
+                    vehicle=vehicle, 
+                    status='Ongoing Vehicle Maintenance',
+                    travel_date__gte=timezone.now().date()
+                )
+                
+                serializer = self.serializer_class(queryset, many=True)
+                vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
+                plate_number = vehicle.plate_number
+                model = vehicle.model
+                capacity = vehicle.capacity
+                type = vehicle.type
+                driver_assigned_to = vehicle.driver_assigned_to.username
+                is_vip = vehicle.is_vip
+                vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
+                image_url = vehicle.image.url if vehicle.image else None
+
+                vehicles[vehicle.plate_number] = {
+                    'vehicle': vehicle_key,
+                    'plate_number': plate_number,
+                    'model': model,
+                    'capacity': capacity,
+                    'type': type,
+                    'image': image_url,
+                    'driver_assigned_to': driver_assigned_to,
+                    'vip_assigned_to': vip_assigned_to, 
+                    'is_vip': is_vip,
+                    'schedules': serializer.data,
+                }
+            return Response({'data': vehicles }, status=status.HTTP_200_OK)
     
 
 class CheckVehicleOnProcess(generics.ListAPIView):
@@ -183,7 +257,7 @@ class VehicleEachSchedule(generics.ListAPIView):
                     'Approved', 
                     'Approved - Alterate Vehicle', 
                     'Awaiting Vehicle Alteration', 
-                    'Vehicle Maintenance'
+                    'Ongoing Vehicle Maintenance'
                 ],
                 travel_date__gte=timezone.now().date()
             )
