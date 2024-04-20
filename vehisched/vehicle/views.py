@@ -71,19 +71,22 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         user = self.request.user
-        print(user)
         role = self.request.GET.get('role')
         is_another_vehicle = self.request.GET.get('is_another_vehicle')
+        existing_vehicle = self.request.GET.get('existing_vehicle')
+        user_id = self.request.GET.get('user_id')
+        print("is another", is_another_vehicle)
         if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
+        timezone.activate('Asia/Manila')
         
-        if is_another_vehicle:
-   
-            filtered_vehicles = Vehicle.objects.all()
+        if is_another_vehicle == 'true':
+            
+            all_vehicles = Vehicle.objects.exclude(plate_number=existing_vehicle)
 
             vehicles = {}
 
-            for vehicle in filtered_vehicles:
+            for vehicle in all_vehicles:
                 queryset = Request.objects.filter(
                     vehicle=vehicle, 
                     status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
@@ -113,8 +116,9 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                     'is_vip': is_vip,
                     'schedules': serializer.data,
                 }
-            return Response({'data': vehicles }, status=status.HTTP_200_OK)
+            return Response({'data': vehicles, 'another_set_of_vehicles': 'true' }, status=status.HTTP_200_OK)
         else:
+            
             filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
 
             vehicles = {}
@@ -122,8 +126,10 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
             for vehicle in filtered_vehicles:
                 queryset = Request.objects.filter(
                     vehicle=vehicle, 
-                    status='Ongoing Vehicle Maintenance',
-                    travel_date__gte=timezone.now().date()
+                    status__in=['Approved', 'Ongoing Vehicle Maintenance'],
+                    vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                    travel_date__gte=timezone.now().date(),
+                    requester_name=user_id,
                 )
                 
                 serializer = self.serializer_class(queryset, many=True)
@@ -150,7 +156,19 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                     'schedules': serializer.data,
                 }
             return Response({'data': vehicles }, status=status.HTTP_200_OK)
-    
+
+class AnotherVehicle(generics.ListAPIView):
+    serializer_class=VehicleSerializer
+
+    def get(self, request, *args, **kwargs):
+        existing_vehicle = self.request.GET.get("existing_vehicle")
+
+        vehicle = Vehicle.objects.exclude(plate_number=existing_vehicle)
+
+        serializer = VehicleSerializer(vehicle, many=True)
+        serialized_data = serializer.data
+
+        return Response(serialized_data)
 
 class CheckVehicleOnProcess(generics.ListAPIView):
         

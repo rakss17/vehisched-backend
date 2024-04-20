@@ -10,5 +10,6 @@ urlpatterns = [
          name='fetch-vehicle-vip'),
     path('check-vehicle-on-process/', views.CheckVehicleOnProcess.as_view(), name='check-vehicle-on-process'),
     path('fetch-each-vehicle-schedule/', views.VehicleEachSchedule.as_view(), name='fetch-each-vehicle-schedule'),
+    path('another-vehicle/', views.AnotherVehicle.as_view(), name='another-vehicle'),
     path('heartbeat-on-process-vehicle/<int:pk>/', views.HeartbeatView.as_view(), name='heartbeat-on-process-vehicle')
 ]
