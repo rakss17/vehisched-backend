@@ -48,7 +48,7 @@ def check_travel_dates():
                     purpose=trip.trip_id
                 )
                 notification.save()
-                subject='Request Approval'
+                subject='Schedule Reminder'
                 from_email = settings.EMAIL_HOST_USER
                 to_email = request_data.requester_name.email
 

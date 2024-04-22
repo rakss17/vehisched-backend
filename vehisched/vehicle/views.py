@@ -98,7 +98,7 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                 plate_number = vehicle.plate_number
                 model = vehicle.model
                 capacity = vehicle.capacity
-                type = vehicle.type
+                typee = vehicle.type
                 driver_assigned_to = vehicle.driver_assigned_to.username
                 is_vip = vehicle.is_vip
                 vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
@@ -109,7 +109,7 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                     'plate_number': plate_number,
                     'model': model,
                     'capacity': capacity,
-                    'type': type,
+                    'type': typee,
                     'image': image_url,
                     'driver_assigned_to': driver_assigned_to,
                     'vip_assigned_to': vip_assigned_to, 
@@ -119,82 +119,64 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
             return Response({'data': vehicles, 'another_set_of_vehicles': 'true' }, status=status.HTTP_200_OK)
         else:
             print("trigger diri")
-            owner = Request.objects.filter(requester_name=user_id)
-            if owner == user_id:
-                filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
+            
+            
+            filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
+        
+            vehicles = {}
 
-                vehicles = {}
+            for vehicle in filtered_vehicles:
+                owners = Request.objects.filter(requester_name=user_id)
+                queryset_list = []
+                for owner in owners:
+                    if owner.requester_name.id == int(user_id):
+                        print("not maintenance")
+                        queryset = Request.objects.filter(
+                            vehicle=vehicle, 
+                            status__in=['Approved'],
+                            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                            travel_date__gte=timezone.now().date(),
+                            requester_name=user_id,
+                        )
+                        queryset_list.append(queryset)
+                    if owner.requester_name.id != user_id:
+                        print("maintenance")
+                        queryset = Request.objects.filter(
+                            vehicle=vehicle, 
+                            status__in=['Ongoing Vehicle Maintenance'],
+                            vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
+                            travel_date__gte=timezone.now().date(),
+                        )
+                        queryset_list.append(queryset)
+                
+                combined_queryset = Request.objects.none() # Start with an empty queryset
+                for qs in queryset_list:
+                    combined_queryset |= qs # Combine querysets using the OR operator
 
-                for vehicle in filtered_vehicles:
-                    queryset = Request.objects.filter(
-                        vehicle=vehicle, 
-                        status__in=['Approved', 'Ongoing Vehicle Maintenance'],
-                        vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                        travel_date__gte=timezone.now().date(),
-                        requester_name=user_id,
-                    )
-                    
-                    serializer = self.serializer_class(queryset, many=True)
-                    vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
-                    plate_number = vehicle.plate_number
-                    model = vehicle.model
-                    capacity = vehicle.capacity
-                    type = vehicle.type
-                    driver_assigned_to = vehicle.driver_assigned_to.username
-                    is_vip = vehicle.is_vip
-                    vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
-                    image_url = vehicle.image.url if vehicle.image else None
+                serializer = self.serializer_class(combined_queryset, many=True)
+                vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
+                plate_number = vehicle.plate_number
+                model = vehicle.model
+                capacity = vehicle.capacity
+                typee = vehicle.type
+                driver_assigned_to = vehicle.driver_assigned_to.username
+                is_vip = vehicle.is_vip
+                vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
+                image_url = vehicle.image.url if vehicle.image else None
 
-                    vehicles[vehicle.plate_number] = {
-                        'vehicle': vehicle_key,
-                        'plate_number': plate_number,
-                        'model': model,
-                        'capacity': capacity,
-                        'type': type,
-                        'image': image_url,
-                        'driver_assigned_to': driver_assigned_to,
-                        'vip_assigned_to': vip_assigned_to, 
-                        'is_vip': is_vip,
-                        'schedules': serializer.data,
-                    }
-                return Response({'data': vehicles }, status=status.HTTP_200_OK)
-            elif owner != user_id:
-                filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
-
-                vehicles = {}
-
-                for vehicle in filtered_vehicles:
-                    queryset = Request.objects.filter(
-                        vehicle=vehicle, 
-                        status__in=['Approved', 'Ongoing Vehicle Maintenance'],
-                        vehicle_driver_status_id__status__in = ['Reserved - Assigned', 'On Trip', 'Unavailable'],
-                        travel_date__gte=timezone.now().date(),
-                    )
-                    
-                    serializer = self.serializer_class(queryset, many=True)
-                    vehicle_key = f"{vehicle.plate_number} {vehicle.model}"
-                    plate_number = vehicle.plate_number
-                    model = vehicle.model
-                    capacity = vehicle.capacity
-                    type = vehicle.type
-                    driver_assigned_to = vehicle.driver_assigned_to.username
-                    is_vip = vehicle.is_vip
-                    vip_assigned_to = vehicle.vip_assigned_to.username if vehicle.vip_assigned_to else None
-                    image_url = vehicle.image.url if vehicle.image else None
-
-                    vehicles[vehicle.plate_number] = {
-                        'vehicle': vehicle_key,
-                        'plate_number': plate_number,
-                        'model': model,
-                        'capacity': capacity,
-                        'type': type,
-                        'image': image_url,
-                        'driver_assigned_to': driver_assigned_to,
-                        'vip_assigned_to': vip_assigned_to, 
-                        'is_vip': is_vip,
-                        'schedules': serializer.data,
-                    }
-                return Response({'data': vehicles }, status=status.HTTP_200_OK)
+                vehicles[vehicle.plate_number] = {
+                    'vehicle': vehicle_key,
+                    'plate_number': plate_number,
+                    'model': model,
+                    'capacity': capacity,
+                    'type': typee,
+                    'image': image_url,
+                    'driver_assigned_to': driver_assigned_to,
+                    'vip_assigned_to': vip_assigned_to, 
+                    'is_vip': is_vip,
+                    'schedules': serializer.data,
+                }
+            return Response({'data': vehicles }, status=status.HTTP_200_OK)
 
 class AnotherVehicle(generics.ListAPIView):
     serializer_class=VehicleSerializer
