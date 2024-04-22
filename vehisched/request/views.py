@@ -1486,6 +1486,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             purpose='Vehicle Maintenance',
             status= 'Ongoing Vehicle Maintenance',
             vehicle= vehicle,
+            passenger_name=[] 
         )
 
         new_request.vehicle_driver_status_id = vehicle_driver_status
