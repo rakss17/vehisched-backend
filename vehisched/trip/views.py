@@ -335,21 +335,21 @@ class CheckTimeAvailability(generics.ListAPIView):
                 if is_unavailable_within_date_range_less:
                     
                     if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() < unavailable_within_date_range.date(): 
-                        print("time_slot.time()", time_slot.time())
-                        print("unavailable_within_date_range.time()", unavailable_within_date_range.time())
+                        
                         if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
                             print("TRIGGER RA SAD DIRI")
                             unavailable_times['unavailable_time_in_date_range'].append(unavailable_within_date_range.date())
                             
                             continue
-
-                if is_unavailable_within_date_range_greater: 
-                    
-                    if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() == unavailable_within_date_range.date(): 
                         
-                        if unavailable_within_date_range is not None and time_slot.time() < unavailable_within_date_range.time():
-                            print("NA TRIGGER RA")
-                            continue
+                # ------------------------------------ WRONG LOGIC ----------------------------------------------------- #
+                # if is_unavailable_within_date_range_greater: 
+                    
+                #     if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() == unavailable_within_date_range.date(): 
+                        
+                #         if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
+                #             print("NA TRIGGER RA")
+                #             continue
 
 
                 if is_available:
@@ -436,7 +436,7 @@ class CheckTimeAvailability(generics.ListAPIView):
 
             overlapping_date_range_greater = Request.objects.filter(
                 
-                Q(travel_date=date, travel_time__lte=time_slot_time),
+                Q(travel_date=date, return_time__lte=time_slot_time),
                 status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
                     )
             is_available_overlapping_date_range_greater = not overlapping_date_range_greater.exists()
