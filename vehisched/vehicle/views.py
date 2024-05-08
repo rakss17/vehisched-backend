@@ -292,12 +292,7 @@ class VehicleEachSchedule(generics.ListAPIView):
         for vehicle in page_obj:
             queryset = Request.objects.filter(
                 vehicle=vehicle, 
-                status__in=[
-                    'Approved', 
-                    'Approved - Alterate Vehicle', 
-                    'Awaiting Vehicle Alteration', 
-                    'Ongoing Vehicle Maintenance'
-                ],
+                status__in=['Pending', 'Approved', 'Rescheduled', 'Awaiting Rescheduling', 'Approved - Alterate Vehicle', 'Awaiting Vehicle Alteration', 'Ongoing Vehicle Maintenance'],
                 travel_date__gte=timezone.now().date()
             )
             
