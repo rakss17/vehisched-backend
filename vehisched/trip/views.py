@@ -314,7 +314,10 @@ class CheckTimeAvailability(generics.ListAPIView):
         current_date = preferred_start_travel_date
         unavailable_times = {'unavailable_time_in_date_range': []}
         is_unavailable_within_day_only = False
-        unavailable_within_date_range = None        
+        unavailable_within_date_range = None
+        unavailable_time_greater = None
+        is_unavailable_within_day_greater = False
+       
         
         while current_date <= preferred_end_travel_date:
             start_time = datetime.combine(current_date, datetime.min.time())
@@ -337,27 +340,33 @@ class CheckTimeAvailability(generics.ListAPIView):
                     if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() < unavailable_within_date_range.date(): 
                         
                         if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
-                            print("TRIGGER RA SAD DIRI")
+                            
                             unavailable_times['unavailable_time_in_date_range'].append(unavailable_within_date_range.date())
                             
                             continue
                         
-                # ------------------------------------ WRONG LOGIC ----------------------------------------------------- #
-                # if is_unavailable_within_date_range_greater: 
+                if is_unavailable_within_date_range_greater: 
                     
-                #     if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() == unavailable_within_date_range.date(): 
+                    if unavailable_within_date_range is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() == unavailable_within_date_range.date(): 
                         
-                #         if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
-                #             print("NA TRIGGER RA")
-                #             continue
-
+                        if unavailable_within_date_range is not None and time_slot.time() > unavailable_within_date_range.time():
+                            unavailable_time_greater = unavailable_within_date_range
 
                 if is_available:
                     available_times_by_date[current_date.strftime("%Y-%m-%d")].append(time_slot.strftime("%H:%M"))
                 else:
                     unavailable_within_date_range = time_slot
-                        
+
+                if is_unavailable_within_day and not is_unavailable_within_day_greater:
+                    is_unavailable_within_day_greater = is_unavailable_within_day
+
             current_date += timedelta(days=1)
+
+            if unavailable_time_greater is not None and preferred_start_travel_date.date() != preferred_end_travel_date.date() and preferred_start_travel_date.date() == unavailable_time_greater.date() and is_unavailable_within_day_greater:
+
+                time_slotss = self.generate_time_slots_for_greater(start_time, end_time, unavailable_time_greater.time())
+            
+                available_times_by_date[preferred_start_travel_date.date().strftime("%Y-%m-%d")] = [slot.strftime("%H:%M") for slot in time_slotss]
         
         formatted_available_times = {date: {'available_time': times} for date, times in available_times_by_date.items()}
         formatted_available_times['unavailable_time_in_date_range'] = unavailable_times
@@ -374,6 +383,22 @@ class CheckTimeAvailability(generics.ListAPIView):
             if current_time_str not in ["11:00", "11:30", "12:00", "12:30"]:
                 time_slots.append(current_time)
             
+            current_time += timedelta(minutes=30)
+        
+        return time_slots
+
+    def generate_time_slots_for_greater(self, start_time, end_time, unavailable_time_greater):
+        time_slots = []
+        current_time = start_time
+        
+        while current_time < end_time:
+            current_time_str = current_time.strftime("%H:%M")
+  
+            if current_time_str not in ["11:00", "11:30", "12:00", "12:30"]:
+                
+                if unavailable_time_greater and unavailable_time_greater < current_time.time():
+                    time_slots.append(current_time)
+
             current_time += timedelta(minutes=30)
         
         return time_slots
