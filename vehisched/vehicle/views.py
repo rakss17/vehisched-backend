@@ -75,7 +75,6 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
         is_another_vehicle = self.request.GET.get('is_another_vehicle')
         existing_vehicle = self.request.GET.get('existing_vehicle')
         user_id = self.request.GET.get('user_id')
-        print("is another", is_another_vehicle)
         if not role == 'vip':
             raise PermissionDenied("Only VIP users can access this view.")
         timezone.activate('Asia/Manila')
@@ -118,9 +117,6 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                 }
             return Response({'data': vehicles, 'another_set_of_vehicles': 'true' }, status=status.HTTP_200_OK)
         else:
-            print("trigger diri")
-            
-            
             filtered_vehicles =  Vehicle.objects.filter(vip_assigned_to=user)
         
             vehicles = {}
@@ -130,7 +126,6 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                 queryset_list = []
                 for owner in owners:
                     if owner.requester_name.id == int(user_id):
-                        print("not maintenance")
                         queryset = Request.objects.filter(
                             vehicle=vehicle, 
                             status__in=['Approved'],
@@ -140,7 +135,6 @@ class VehicleForVIPListView(generics.ListCreateAPIView):
                         )
                         queryset_list.append(queryset)
                     if owner.requester_name.id != user_id:
-                        print("maintenance")
                         queryset = Request.objects.filter(
                             vehicle=vehicle, 
                             status__in=['Ongoing Vehicle Maintenance'],

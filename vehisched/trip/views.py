@@ -637,26 +637,12 @@ class CheckReturnTimeAvailability(generics.ListAPIView):
     
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
-        print(f"Preferred Start Travel Date: {preferred_start_travel_date}")
-
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
-        print(f"Preferred End Travel Date: {preferred_end_travel_date}")
-
         preferred_travel_time = self.request.GET.get("preferred_travel_time")
-        print(f"Preferred Travel Time: {preferred_travel_time}")
-
         user_id = self.request.GET.get("user_id")
-        print(f"User ID: {user_id}")
-
         role = self.request.GET.get("role")
-        print(f"Role: {role}")
-
         is_another_vehicle = self.request.GET.get("is_another_vehicle")
-        print(f"Is Another Vehicle: {is_another_vehicle}")
-
         selected_vehicle = self.request.GET.get("selected_vehicle")
-        print(f"Selected Vehicle: {selected_vehicle}")
-
 
         start_date = datetime.strptime(preferred_start_travel_date, "%Y-%m-%d")
         end_date = datetime.strptime(preferred_end_travel_date, "%Y-%m-%d")
@@ -730,14 +716,10 @@ class CheckReturnTimeAvailability(generics.ListAPIView):
             exclude_after_time = None
             
             if existing_request_after is not None and existing_request_after.exists():
-                print("existing_request_after", existing_request_after)
                 exclude_after_time = min(existing_request_after.values_list('travel_time', flat=True))
-                print("exclude_after_time", exclude_after_time)
                
             if existing_request_before is not None and existing_request_before.exists():
-                print("existing_request_before", existing_request_before)
                 exclude_before_time = max(existing_request_before.values_list('return_time', flat=True))
-                print("exclude_before_time", exclude_before_time)
            
             time_slots = self.generate_time_slots(start_time, end_time, exclude_before_time, exclude_after_time)
           
