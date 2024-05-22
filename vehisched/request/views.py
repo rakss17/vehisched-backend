@@ -46,7 +46,7 @@ def estimate_arrival_time(origin, destination, departure_time):
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
     datetime_str = departure_time.strftime("%Y-%m-%d %H:%M")
-    
+
     departure_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
     departure_timestamp = int(departure_datetime.timestamp())
 
@@ -99,7 +99,7 @@ def get_place_details(request):
 
     departure_time = parse(f"{travel_date}T{travel_time}")
 
-    
+
     arrival_time, distance = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
 
     if arrival_time is not None:
@@ -298,6 +298,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name=None,
+                    main_merge=True,
                      vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=None,
@@ -347,6 +348,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name = driver,
+                    main_merge=True,
                     vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=driver,
@@ -363,11 +365,11 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                 travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
                 travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
-                return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
-                return_time_formatted = new_request.return_time.strftime('%I:%M %p')
+                # return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
+                # return_time_formatted = new_request.return_time.strftime('%I:%M %p')
 
                 subject='Request Approval'
-                message=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
+                message=f"Your request to {new_request.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
                 from_email = settings.EMAIL_HOST_USER
                 to_email = new_request.requester_name.email
 
@@ -703,6 +705,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = False,
+                    main_merge=True,
                     driver_name=None,
                      vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -742,6 +745,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name = driver,
+                    main_merge=True,
                     vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=driver,
@@ -880,7 +884,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 )
                 return Response(RequestSerializer(new_request).data, status=201)
 
-        if merge_trip and not role == 'vip':
+        if merge_trip and role == 'office staff':
             driver = User.objects.get(id=request.data['driver_name'])
             requester = User.objects.get(id=request.data['requester_name'])
             vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -910,8 +914,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 driver_name = driver,
                 vehicle_capacity=vacant,
                 merged_with=request.data['merged_with'],
-                main_merge=merge_trip,
-                
             )
 
             new_request.vehicle_driver_status_id = vehicle_driver_status
@@ -934,6 +936,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     vacant = vehicle_capacity - number_of_passenger
                     existing_request.vehicle_capacity = vacant
                     existing_request.merged_with = f"{new_request.request_id}"
+                    existing_request.main_merge = True
                 existing_request.save()
                 #     vacant = capacity - number_passenger
                     
@@ -1341,33 +1344,67 @@ class RequestCancelView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        existing_requests = Request.objects.filter(request_id=instance.merged_with)
-        for existing_request in existing_requests:
+        if instance.main_merge == True:
+            merged_with_list = [int(item) for item in instance.merged_with.split(',')]
 
-            if existing_request.merged_with is not None:
+            existing_requests = Request.objects.filter(request_id__in=merged_with_list)
+            
+            for existing_request in existing_requests:
                 
-                 # Create a regular expression pattern that matches the request_id along with its preceding comma
-                pattern = r',\s*' + str(instance.request_id)
-                
-                # Use the re.sub() function to replace the matched pattern with an empty string
-                existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
 
-                # If the string starts with a comma, remove it
-                if existing_request.merged_with.startswith(','):
-                    existing_request.merged_with = existing_request.merged_with[1:]
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
 
-                if existing_request.merged_with == '':
-                    # If the string is empty after the removal, set merged_with to None
-                    existing_request.merged_with = None
-                vehicle_capacity = existing_request.vehicle_capacity
-                number_of_passenger = instance.number_of_passenger
-                undo_vacant = vehicle_capacity + number_of_passenger
-                existing_request.vehicle_capacity = undo_vacant
-                instance.main_merge = False
-                instance.merged_with = None
-                instance.save()
-                
-            existing_request.save()
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    
+                    first_request = existing_requests.first()
+                    first_request.main_merge = True
+                    first_request.save()
+                    
+                    existing_request.merged_with = merged_with_list
+                    instance.save()
+                    
+                existing_request.save()
+        else:
+            existing_requests = Request.objects.filter(request_id=instance.merged_with)
+            for existing_request in existing_requests:
+
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
+
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    instance.save()
+                    
+                existing_request.save()
 
         if not is_from_office_staff:
 
@@ -1703,33 +1740,67 @@ class RejectRequestView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        existing_requests = Request.objects.filter(request_id=instance.merged_with)
-        for existing_request in existing_requests:
+        if instance.main_merge == True:
+            merged_with_list = [int(item) for item in instance.merged_with.split(',')]
 
-            if existing_request.merged_with is not None:
+            existing_requests = Request.objects.filter(request_id__in=merged_with_list)
+            
+            for existing_request in existing_requests:
                 
-                 # Create a regular expression pattern that matches the request_id along with its preceding comma
-                pattern = r',\s*' + str(instance.request_id)
-                
-                # Use the re.sub() function to replace the matched pattern with an empty string
-                existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
 
-                # If the string starts with a comma, remove it
-                if existing_request.merged_with.startswith(','):
-                    existing_request.merged_with = existing_request.merged_with[1:]
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
 
-                if existing_request.merged_with == '':
-                    # If the string is empty after the removal, set merged_with to None
-                    existing_request.merged_with = None
-                vehicle_capacity = existing_request.vehicle_capacity
-                number_of_passenger = instance.number_of_passenger
-                undo_vacant = vehicle_capacity + number_of_passenger
-                existing_request.vehicle_capacity = undo_vacant
-                instance.main_merge = False
-                instance.merged_with = None
-                instance.save()
-                
-            existing_request.save()
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    
+                    first_request = existing_requests.first()
+                    first_request.main_merge = True
+                    first_request.save()
+                    
+                    existing_request.merged_with = merged_with_list
+                    instance.save()
+                    
+                existing_request.save()
+        else:
+            existing_requests = Request.objects.filter(request_id=instance.merged_with)
+            for existing_request in existing_requests:
+
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
+
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    instance.save()
+                    
+                existing_request.save()
 
         reason = request.data.get('reason')
 

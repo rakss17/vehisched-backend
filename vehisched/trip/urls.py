@@ -25,5 +25,6 @@ urlpatterns = [
      path('driver-own-schedule/', views.DriverOwnScheduleView.as_view(), name='driver-own-schedule'), 
      path('driver-trips-schedule/', views.DriverTripsView.as_view(), name='driver-own-schedule'),
      path('check-time-availability/', views.CheckTimeAvailability.as_view(), name='check-time-availability'), 
+     path('check-return-time-availability/', views.CheckReturnTimeAvailability.as_view(), name='check-return-time-availability'), 
      path('check-schedule-conflicts-for-oneway/', views.CheckScheduleConflictsForOneway.as_view(), name='check-schedule-conflicts-for-oneway'), 
 ]
