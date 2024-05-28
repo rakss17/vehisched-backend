@@ -1,4 +1,4 @@
-from rest_framework import generics, status
+from rest_framework import generics
 from django.http import JsonResponse
 from .models import Trip
 from notification.models import Notification
@@ -13,11 +13,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from request.serializers import RequestSerializer
 from datetime import datetime, timedelta
-from django.utils.dateparse import parse_date, parse_time
 from django.utils import timezone
 from django.http import FileResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+import re
 
 
 class ScheduleRequesterView(generics.ListAPIView):
@@ -177,6 +177,9 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
             request_data = Request.objects.get(request_id=trip.request_id)
             if trip.driver_name:
                 driver_data = User.objects.get(username=trip.driver_name)
+            passenger_names_str = re.sub(r"[^a-zA-Z0-9 ,]", "", trip.passenger_name)
+            passenger_names = passenger_names_str.split(', ')
+            formatted_passenger_names = ", ".join(passenger_names)
             trip_data.append({
                 'trip_id': trip.request_id,
                 'request_id': request_data.request_id,
@@ -190,9 +193,15 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
                 'destination': request_data.destination,
                 'vehicle': request_data.vehicle.plate_number,
                 'status': trip.status,
+                'date_reserved': trip.date_reserved,
+                'office': trip.office,
+                'type': trip.type.name,
+                'number_of_passenger': trip.number_of_passenger,
+                'passenger_name': formatted_passenger_names,
+                'purpose': trip.purpose
             })
-
-        return JsonResponse(trip_data, safe=False)
+        sorted_trip_data = sorted(trip_data, key=lambda x: (x['travel_date'], x['travel_time']))
+        return JsonResponse(sorted_trip_data, safe=False)
 
 
 class CheckVehicleAvailability(generics.ListAPIView):
@@ -833,7 +842,7 @@ class VehicleSchedulesView(generics.ListAPIView):
                         'vehicle': request_data.vehicle.plate_number if request_data else None,
                         'status': trip.status,
                     })
-        sorted_trip_data = sorted(trip_data, key=lambda x: x['travel_date'])
+        sorted_trip_data = sorted(trip_data, key=lambda x: (x['travel_date'], x['travel_time']))
         return JsonResponse(sorted_trip_data , safe=False)
 
 class DriverSchedulesView(generics.ListAPIView):
@@ -882,7 +891,7 @@ class DriverSchedulesView(generics.ListAPIView):
                             'vehicle': request_data.vehicle.plate_number if request_data else None,
                             'status': trip.status,
                         })    
-        sorted_trip_data = sorted(trip_data, key=lambda x: x['travel_date'])
+        sorted_trip_data = sorted(trip_data, key=lambda x: (x['travel_date'], x['travel_time']))
         return JsonResponse(sorted_trip_data , safe=False)
     
 

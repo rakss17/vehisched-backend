@@ -1047,7 +1047,7 @@ class RequestListOfficeStaffView(generics.ListAPIView):
                 Q(purpose__icontains=search_query)
             )
        
-        queryset = queryset.order_by('travel_date')
+        queryset = queryset.order_by('travel_date', 'travel_time')
         page_size = 10 
         page_number = request.GET.get('page', 1) 
         paginator = Paginator(queryset, page_size)
