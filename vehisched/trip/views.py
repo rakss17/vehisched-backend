@@ -807,7 +807,7 @@ class VehicleSchedulesView(generics.ListAPIView):
                         trip_data.append({
                             'trip_id': trip.request_id,
                             'request_id': request_data.request_id if request_data else None,
-                            'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                            'requester_full_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
                             'travel_date': request_data.travel_date if request_data else None,
                             'travel_time': request_data.travel_time if request_data else None,
                             'return_date': request_data.return_date if request_data else None,
@@ -824,7 +824,7 @@ class VehicleSchedulesView(generics.ListAPIView):
                     trip_data.append({
                         'trip_id': trip.request_id,
                         'request_id': request_data.request_id if request_data else None,
-                        'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                        'requester_full_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
                         'travel_date': request_data.travel_date if request_data else None,
                         'travel_time': request_data.travel_time if request_data else None,
                         'return_date': request_data.return_date if request_data else None,
@@ -833,8 +833,8 @@ class VehicleSchedulesView(generics.ListAPIView):
                         'vehicle': request_data.vehicle.plate_number if request_data else None,
                         'status': trip.status,
                     })
-
-        return JsonResponse(trip_data, safe=False)
+        sorted_trip_data = sorted(trip_data, key=lambda x: x['travel_date'])
+        return JsonResponse(sorted_trip_data , safe=False)
 
 class DriverSchedulesView(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
@@ -853,7 +853,7 @@ class DriverSchedulesView(generics.ListAPIView):
                         trip_data.append({
                             'trip_id': trip.request_id,
                             'request_id': request_data.request_id if request_data else None,
-                            'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                            'requester_full_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
                             'travel_date': request_data.travel_date if request_data else None,
                             'travel_time': request_data.travel_time if request_data else None,
                             'return_date': request_data.return_date if request_data else None,
@@ -871,7 +871,7 @@ class DriverSchedulesView(generics.ListAPIView):
                         trip_data.append({
                             'trip_id': trip.request_id,
                             'request_id': request_data.request_id if request_data else None,
-                            'requester_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
+                            'requester_full_name': f"{request_data.requester_name.last_name}, {request_data.requester_name.first_name} {request_data.requester_name.middle_name}" if request_data else None,
                             'travel_date': request_data.travel_date if request_data else None,
                             'travel_time': request_data.travel_time if request_data else None,
                             'return_date': request_data.return_date if request_data else None,
@@ -882,8 +882,8 @@ class DriverSchedulesView(generics.ListAPIView):
                             'vehicle': request_data.vehicle.plate_number if request_data else None,
                             'status': trip.status,
                         })    
-
-        return JsonResponse(trip_data, safe=False)
+        sorted_trip_data = sorted(trip_data, key=lambda x: x['travel_date'])
+        return JsonResponse(sorted_trip_data , safe=False)
     
 
 class VehicleRecommendationAcceptance(generics.UpdateAPIView):
