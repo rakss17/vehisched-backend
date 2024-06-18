@@ -1,6 +1,6 @@
-from rest_framework import generics, status, mixins
+from rest_framework import generics, status
 from rest_framework.response import Response
-from .models import Request, Type, Vehicle_Driver_Status, Question, Answer
+from .models import Request, Type, Vehicle_Driver_Status, Question, Answer, AddressFromGoogleMap
 from trip.models import Trip
 from accounts.models import Role, User
 from .serializers import RequestSerializer, RequestOfficeStaffSerializer, Question2Serializer, AnswerSerializer
@@ -16,21 +16,37 @@ import datetime as timedate
 from datetime import datetime
 from django.utils import timezone
 from dateutil.parser import parse
+from django.conf import settings
 import fitz
 import qrcode
 import ast
+from django.core.paginator import Paginator
 import re
 from dotenv import load_dotenv
 import os
+from django.core.mail import send_mail
+
+MEDIA_ROOT = settings.MEDIA_ROOT
 
 load_dotenv()
+
+def calculate_date_gap(date1, date2):
+    diff = date2 - date1
+
+    return {
+        "milliseconds": diff.total_seconds() * 1000,
+        "seconds": diff.total_seconds(),
+        "minutes": diff.total_seconds() / 60,
+        "hours": diff.total_seconds() / 3600,
+        "days": diff.days
+    }
 
 def estimate_arrival_time(origin, destination, departure_time):
     api_key = os.getenv('GOOGLE_MAP_API_KEY')
     distance_matrix_api_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
 
     datetime_str = departure_time.strftime("%Y-%m-%d %H:%M")
-    
+
     departure_datetime = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M")
     departure_timestamp = int(departure_datetime.timestamp())
 
@@ -83,7 +99,7 @@ def get_place_details(request):
 
     departure_time = parse(f"{travel_date}T{travel_time}")
 
-    
+
     arrival_time, distance = estimate_arrival_time(ustp_coordinates, destination_coordinates, departure_time)
 
     if arrival_time is not None:
@@ -97,6 +113,43 @@ def get_place_details(request):
         place_data['estimated_arrival_time'] = None
         place_data['estimated_return_time'] = None
         place_data['distance'] = None
+
+    arrival_date, arrival_time = place_data["estimated_arrival_time"].split("T")
+    return_date, return_time = place_data["estimated_return_time"].split("T")
+    distanceString = place_data["distance"]
+    distance = float(distanceString.split()[0])
+
+    addressComponents = [
+        {"short_name": component["short_name"]} for component in place_data["result"]["address_components"]
+    ]
+    addressName = place_data["result"]["name"]
+    fullAddress = addressName + ", " + ", ".join(component["short_name"] for component in addressComponents)
+
+    date_time1 = parse(f"{travel_date}T{travel_time}")
+    date_time2 = datetime.strptime(f"{return_date} {return_time}", "%Y-%m-%d %H:%M:%S")
+
+    result = calculate_date_gap(date_time1, date_time2)
+
+    if not AddressFromGoogleMap.objects.filter(place_id=place_id).exists():
+        AddressFromGoogleMap.objects.create(
+            place_id=place_id,
+            full_address=fullAddress,
+            distance=distance,
+            travel_date=travel_date,
+            travel_time=travel_time,
+            estimated_arrival_date_to_destination=arrival_date,
+            estimated_arrival_time_to_destination=arrival_time,
+            estimated_return_date_to_ustp=return_date,
+            estimated_return_time_to_ustp=return_time,
+            travel_return_date_gap_in_milliseconds=result["milliseconds"],
+            travel_return_date_gap_in_seconds=result['seconds'],
+            travel_return_date_gap_in_minutes=result['minutes'],
+            travel_return_date_gap_in_hours=result['hours'],
+            travel_return_date_gap_in_days=result['days']
+        )
+        print("Google Map Address successfully added to Vehi-Sched Database.")
+    else:
+        print("Google Map Address already exists in Vehi-Sched Database.")
 
     return JsonResponse(place_data)
 
@@ -145,6 +198,29 @@ class RequestListCreateView(generics.ListCreateAPIView):
         role = request.data['role']
         merge_trip = request.data['merge_trip']
 
+        travel_date_converted = datetime.strptime(travel_date, '%Y-%m-%d').date()
+        travel_time_converted = datetime.strptime(travel_time, '%H:%M').time()
+        return_date_converted = datetime.strptime(return_date, '%Y-%m-%d').date()
+        # Check if the string contains seconds
+        if len(return_time.split(':')) > 2:
+            # If the string contains seconds, remove them
+            return_time_without_seconds = ':'.join(return_time.split(':')[:2])
+        else:
+            # If the string does not contain seconds, use it as is
+            return_time_without_seconds = return_time
+
+        # Convert the string to a datetime object, excluding seconds if present
+        return_time_converted = datetime.strptime(return_time_without_seconds, '%H:%M').time()
+
+        travel_datetime = datetime.combine(travel_date_converted, travel_time_converted)
+        travel_datetime = timezone.make_aware(travel_datetime)
+        return_datetime = datetime.combine(return_date_converted, return_time_converted)
+        return_datetime = timezone.make_aware(return_datetime)
+
+        if travel_datetime > return_datetime:
+            error_message = "Please check the travel date and time, it may be after the return date and time"
+            return Response({'error': error_message}, status=400)
+
         if role == 'office staff' and not merge_trip:
             requester_name = User.objects.get(id=request.data['requester_name'])
             driver = User.objects.get(id=request.data['driver_name'])
@@ -179,9 +255,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
             ).exists():
                 error_message = "The selected vehicle is in queue. You cannot reserve this at the moment unless the requester cancel it."
                 return Response({'error': error_message}, status=400)
-        
-            
-            
+
             unavailable_driver = Request.objects.filter(
                 (
                     Q(travel_date__range=[travel_date, travel_date]) &
@@ -224,6 +298,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name=None,
+                    main_merge=True,
                      vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=None,
@@ -236,6 +311,17 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     owner=self.request.user,
                     subject=f"A new request has been submitted by {self.request.user}" )
                 notification.save()
+                travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
+                return_time_formatted = new_request.return_time.strftime('%I:%M %p')
+
+                subject='Request Approval'
+                message=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
+                from_email = settings.EMAIL_HOST_USER
+                to_email = new_request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
@@ -262,6 +348,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name = driver,
+                    main_merge=True,
                     vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=driver,
@@ -275,6 +362,18 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     owner=self.request.user,
                     subject=f"A new request has been submitted by {self.request.user}")
                 notification.save()
+
+                travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
+                travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                # return_date_formatted = new_request.return_date.strftime('%m/%d/%Y')
+                # return_time_formatted = new_request.return_time.strftime('%I:%M %p')
+
+                subject='Request Approval'
+                message=f"Your request to {new_request.destination} on {travel_date_formatted} at {travel_time_formatted} has been approved."
+                from_email = settings.EMAIL_HOST_USER
+                to_email = new_request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
 
                 async_to_sync(channel_layer.group_send)(
                 'notifications', 
@@ -337,9 +436,27 @@ class RequestListCreateView(generics.ListCreateAPIView):
                                     'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                                 }
                             )
+                            subject='Vehicle Alteration'
+                            message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                            from_email = settings.EMAIL_HOST_USER
+                            to_email = requestt.requester_name.email
+
+                            send_mail(subject, message, from_email, [to_email])
                         filtered_requests.update(status='Awaiting Vehicle Alteration')
+                
                 travel_date_formatted = new_request.travel_date.strftime('%m/%d/%Y')
                 travel_time_formatted = new_request.travel_time.strftime('%I:%M %p')
+                return_date_obj = datetime.strptime(new_request.return_date, '%Y-%m-%d')
+
+                return_date_formatted = return_date_obj.strftime('%m/%d/%Y')
+                if len(return_time.split(':')) > 2:
+                    return_time_without_seconds = ':'.join(return_time.split(':')[:2])
+                else:
+                    return_time_without_seconds = return_time
+
+                return_time_obj = datetime.strptime(return_time_without_seconds, '%H:%M')
+
+                return_time_formatted = return_time_obj.strftime('%I:%M %p')
                 destination = new_request.destination.split(',', 1)[0]
 
                 async_to_sync(channel_layer.group_send)(
@@ -356,21 +473,49 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 )
                 notification.save()
 
+                requester_contact_number = new_request.requester_name.mobile_number
+                office = new_request.office
+                number_of_passenger = new_request.number_of_passenger
                 
                 driver_name = new_request.driver_name.get_full_name()
                 vehicle_plate_number = new_request.vehicle.plate_number
                 vehicle_model = new_request.vehicle.model
                 requester_name = new_request.requester_name.get_full_name()
-                
-                destination = destination
+              
+                destination_for_docs = new_request.destination
                 purpose = new_request.purpose
-                if(new_request.date_reserved):
-                    formatted_datereserved = timedate.datetime.strftime(new_request.date_reserved, "%m/%d/%Y, %I:%M %p")
+                if new_request.date_reserved:
+                    formatted_datereserved = new_request.date_reserved.strftime("%m/%d/%Y")
+                if len(destination_for_docs) > 85:
+                    index = 85 - 3
+                    
+                    index = min(index, len(destination_for_docs) - 1)
+            
+                    destination_for_docs = destination_for_docs[:index] + "......"
 
-                passenger_name_list = new_request.passenger_name
-
+                passenger_name_list = new_request.passenger_name  
                 passenger_names_string = ", ".join(passenger_name_list)
 
+        
+                if len(passenger_names_string) > 85:
+                
+                    index = 85 - 3 - 2
+            
+                    index = min(index, len(passenger_names_string) - 1)
+                    
+                    passenger_names_string = passenger_names_string[:index] + "......"
+                
+                purpose_tripticket = new_request.purpose
+
+                if len(purpose_tripticket) > 100:
+                    
+                    index = 100 - 3
+                
+                    index = min(index, len(purpose_tripticket) - 1)
+                    
+                    purpose_tripticket = purpose_tripticket[:index] + "......"
+
+                #TRIPTICKET 
                 qr = qrcode.QRCode(
                     version=1,
                     error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -386,29 +531,64 @@ class RequestListCreateView(generics.ListCreateAPIView):
 
                 pixmap = fitz.Pixmap("temp.png")
 
-                doc = fitz.open('media/documents/tripticket.pdf')
-                page = doc[0] 
+                tripticket_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/tripticket.pdf'))
+                page = tripticket_doc[0] 
 
-                text_annotations = {
+                tripticket_text_annotations = {
                     driver_name: [220, 142],
-                    vehicle_plate_number +" " + vehicle_model: [220, 152],
-                    requester_name+", " + passenger_names_string: [220, 160],
-                    destination: [220, 170],
-                    purpose: [130, 180],
-                    formatted_datereserved: [450, 80]
+                    vehicle_plate_number +" " + vehicle_model: [220, 153],
+                    requester_name+", " + passenger_names_string: [220, 161],
+                    destination_for_docs: [220, 171],
+                    purpose_tripticket: [130, 180],
+                    travel_date_formatted: [450, 80]
                 }
                 rect = fitz.Rect(520, 20, 570, 70)  
                 page.insert_image(rect, pixmap=pixmap)
 
-                for text, coordinates in text_annotations.items():
-                    page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
+                for text, coordinates in tripticket_text_annotations.items():
+                    page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
 
-                doc.save(f"media/documents/tripticket{new_request.request_id}.pdf")
-                doc.close()
+                tripticket_doc.save(os.path.join(MEDIA_ROOT, f"documents/tripticket{new_request.request_id}.pdf"))
+                tripticket_doc.close()
                 os.remove("temp.png")
                 
                 trip.qr_code_data = new_request.request_id
                 trip.tripticket_pdf = f"documents/tripticket{new_request.request_id}.pdf"
+                trip.save()
+
+                #REQUEST FORM
+                requestform_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/requestform.pdf'))
+                page = requestform_doc[0]
+
+                base_coordinates_first_part = [80, 211]
+                base_coordinates_second_part = [80, 223]
+
+                first_part_of_purpose = purpose[:104]
+                second_part_of_purpose = purpose[104:]
+
+                requestform_text_annotations = {
+                    str(formatted_datereserved): [185, 135],
+                    str(requester_name): [185, 145],
+                    str(office): [445, 145],
+                    str(number_of_passenger): [190, 157],
+                    "0"+str(requester_contact_number): [445, 155],
+                    str(passenger_names_string): [185, 168],
+                    str(destination_for_docs): [185, 178],
+                    str(travel_date_formatted) +" to " + str(return_date_formatted): [185, 190],
+                    str(travel_time_formatted) +" to " + str(return_time_formatted): [445, 190],
+                    str(first_part_of_purpose): base_coordinates_first_part,
+                    str(second_part_of_purpose): base_coordinates_second_part,
+                    str(driver_name): [185, 233],
+                    str(vehicle_plate_number) + " " + str(vehicle_model): [438, 233]
+                }
+
+                for text, coordinates in requestform_text_annotations.items():
+                    page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
+
+                requestform_doc.save(os.path.join(MEDIA_ROOT, f"documents/requestform{new_request.request_id}.pdf"))
+                requestform_doc.close()
+
+                trip.requestform_pdf = f"documents/requestform{new_request.request_id}.pdf"
                 trip.save()
 
             
@@ -525,6 +705,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     type = Type.objects.get(name=typee),
                     distance = request.data['distance'],
                     from_vip_alteration = False,
+                    main_merge=True,
                     driver_name=None,
                      vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -564,6 +745,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     distance = request.data['distance'],
                     from_vip_alteration = False,
                     driver_name = driver,
+                    main_merge=True,
                     vehicle_capacity=vacant )
                 vehicle_driver_status = Vehicle_Driver_Status.objects.create(
                     driver_id=driver,
@@ -702,7 +884,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 )
                 return Response(RequestSerializer(new_request).data, status=201)
 
-        if merge_trip and not role == 'vip':
+        if merge_trip and role == 'office staff':
             driver = User.objects.get(id=request.data['driver_name'])
             requester = User.objects.get(id=request.data['requester_name'])
             vehicle_driver_status = Vehicle_Driver_Status.objects.create(
@@ -732,8 +914,6 @@ class RequestListCreateView(generics.ListCreateAPIView):
                 driver_name = driver,
                 vehicle_capacity=vacant,
                 merged_with=request.data['merged_with'],
-                main_merge=merge_trip,
-                
             )
 
             new_request.vehicle_driver_status_id = vehicle_driver_status
@@ -756,6 +936,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
                     vacant = vehicle_capacity - number_of_passenger
                     existing_request.vehicle_capacity = vacant
                     existing_request.merged_with = f"{new_request.request_id}"
+                    existing_request.main_merge = True
                 existing_request.save()
                 #     vacant = capacity - number_passenger
                     
@@ -829,20 +1010,56 @@ class AnswerListCreateView(generics.ListCreateAPIView):
 
         return Response(status=status.HTTP_201_CREATED)
 
-
 class RequestListOfficeStaffView(generics.ListAPIView):
     serializer_class = RequestOfficeStaffSerializer
-    queryset = Request.objects.all()
 
     def list(self, request, *args, **kwargs):
         office_staff_role = Role.objects.get(role_name='office staff')
         office_staff_users = User.objects.filter(role=office_staff_role)
-
         for user in office_staff_users:
             Notification.objects.filter(owner=user).update(read_status=True)
-            
-        return super().list(request, *args, **kwargs)
 
+        status_filter = request.GET.get('status_filter', None)
+        search_query = request.GET.get('search', None)
+        timezone.activate('Asia/Manila')
+        current_date = timezone.now()
+        queryset = Request.objects.all()
+
+        if status_filter and status_filter.lower() == "all":
+            queryset = queryset.filter(Q(travel_date__gte=current_date.date()))
+        
+        if status_filter and status_filter.lower() != "all" and status_filter.lower() != "logs":
+            queryset = queryset.filter(
+                Q(status=status_filter) & Q(travel_date__gte=current_date.date())
+            )
+
+        if status_filter and status_filter.lower() == "logs":
+            queryset = queryset.filter(
+                Q(return_date__lt=current_date)
+            )
+            
+        if search_query:
+            queryset = queryset.filter(
+                Q(requester_name__first_name__icontains=search_query) |
+                Q(requester_name__last_name__icontains=search_query) |
+                Q(requester_name__username__icontains=search_query) |
+                Q(office__icontains=search_query) |
+                Q(purpose__icontains=search_query)
+            )
+       
+        queryset = queryset.order_by('travel_date', 'travel_time')
+        page_size = 10 
+        page_number = request.GET.get('page', 1) 
+        paginator = Paginator(queryset, page_size)
+        page_obj = paginator.get_page(page_number)
+
+       
+        serializer = self.serializer_class(page_obj.object_list, many=True)
+      
+        return Response({
+            'data': serializer.data,
+            'next_page': page_obj.has_next() and page_obj.next_page_number() or None,
+        }, status=status.HTTP_200_OK)
  
 class RequestReschedule(generics.UpdateAPIView):
     queryset = Request.objects.all()
@@ -945,9 +1162,18 @@ class RequestApprovedView(generics.UpdateAPIView):
                             'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause."
                         }
                     )
+                    subject='Vehicle Alteration'
+                    message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is used by the higher official. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                    from_email = settings.EMAIL_HOST_USER
+                    to_email = requestt.requester_name.email
+
+                    send_mail(subject, message, from_email, [to_email])
                 filtered_requests.update(status='Awaiting Vehicle Alteration')
         travel_date_formatted = instance.travel_date.strftime('%m/%d/%Y')
         travel_time_formatted = instance.travel_time.strftime('%I:%M %p')
+        return_date_formatted = instance.return_date.strftime('%m/%d/%Y')
+        instance.return_time = instance.return_time.replace(second=0)
+        return_time_formatted = instance.return_time.strftime('%I:%M %p')
         destination = instance.destination.split(',', 1)[0]
 
         async_to_sync(channel_layer.group_send)(
@@ -963,7 +1189,16 @@ class RequestApprovedView(generics.UpdateAPIView):
             subject=f"Your request to {destination} on {travel_date_formatted} at {travel_time_formatted} has been approved.",  
         )
         notification.save()
+        
+        subject='Request Approval'
+        from_email = settings.EMAIL_HOST_USER
+        to_email = instance.requester_name.email
 
+        send_mail(subject, notification.subject, from_email, [to_email])
+
+        requester_contact_number = instance.requester_name.mobile_number
+        office = instance.office
+        number_of_passenger = instance.number_of_passenger
         
         driver_name = instance.driver_name.get_full_name()
         vehicle_plate_number = instance.vehicle.plate_number
@@ -972,14 +1207,38 @@ class RequestApprovedView(generics.UpdateAPIView):
         passenger_name = instance.passenger_name
         destination = instance.destination
         purpose = instance.purpose
-        if(instance.date_reserved):
-            formatted_datereserved = timedate.datetime.strftime(instance.date_reserved, "%m/%d/%Y, %I:%M %p")
-
+        if instance.date_reserved:
+            formatted_datereserved = instance.date_reserved.strftime("%m/%d/%Y")
+        if len(destination) > 85:
+            index = 85 - 3
             
+            index = min(index, len(destination) - 1)
+       
+            destination = destination[:index] + "......"
 
         passenger_name_list = ast.literal_eval(passenger_name)  
         passenger_names_string = ", ".join(passenger_name_list)
 
+ 
+        if len(passenger_names_string) > 85:
+           
+            index = 85 - 3 - 2
+       
+            index = min(index, len(passenger_names_string) - 1)
+            
+            passenger_names_string = passenger_names_string[:index] + "......"
+        
+        purpose_tripticket = instance.purpose
+
+        if len(purpose_tripticket) > 100:
+            
+            index = 100 - 3
+         
+            index = min(index, len(purpose_tripticket) - 1)
+            
+            purpose_tripticket = purpose_tripticket[:index] + "......"
+
+        #TRIPTICKET 
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -995,29 +1254,64 @@ class RequestApprovedView(generics.UpdateAPIView):
 
         pixmap = fitz.Pixmap("temp.png")
 
-        doc = fitz.open('media/documents/tripticket.pdf')
-        page = doc[0] 
+        tripticket_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/tripticket.pdf'))
+        page = tripticket_doc[0] 
 
-        text_annotations = {
+        tripticket_text_annotations = {
             driver_name: [220, 142],
-            vehicle_plate_number +" " + vehicle_model: [220, 152],
-            requester_name+", " + passenger_names_string: [220, 160],
-            destination: [220, 170],
-            purpose: [130, 180],
-            formatted_datereserved: [450, 80]
+            vehicle_plate_number +" " + vehicle_model: [220, 153],
+            requester_name+", " + passenger_names_string: [220, 161],
+            destination: [220, 171],
+            purpose_tripticket: [130, 180],
+            travel_date_formatted: [450, 80]
         }
         rect = fitz.Rect(520, 20, 570, 70)  
         page.insert_image(rect, pixmap=pixmap)
 
-        for text, coordinates in text_annotations.items():
-            page.insert_text(coordinates, text, fontname="Helvetica-Bold", fontsize=5)
+        for text, coordinates in tripticket_text_annotations.items():
+            page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
 
-        doc.save(f"media/documents/tripticket{instance.request_id}.pdf")
-        doc.close()
+        tripticket_doc.save(os.path.join(MEDIA_ROOT, f"documents/tripticket{instance.request_id}.pdf"))
+        tripticket_doc.close()
         os.remove("temp.png")
         
         trip.qr_code_data = instance.request_id
         trip.tripticket_pdf = f"documents/tripticket{instance.request_id}.pdf"
+        trip.save()
+
+        #REQUEST FORM
+        requestform_doc = fitz.open(os.path.join(MEDIA_ROOT, 'documents/requestform.pdf'))
+        page = requestform_doc[0]
+
+        base_coordinates_first_part = [80, 211]
+        base_coordinates_second_part = [80, 223]
+
+        first_part_of_purpose = purpose[:104]
+        second_part_of_purpose = purpose[104:]
+
+        requestform_text_annotations = {
+            str(formatted_datereserved): [185, 135],
+            str(requester_name): [185, 145],
+            str(office): [445, 145],
+            str(number_of_passenger): [190, 157],
+            "0"+str(requester_contact_number): [445, 155],
+            str(passenger_names_string): [185, 168],
+            str(destination): [185, 178],
+            str(travel_date_formatted) +" to " + str(return_date_formatted): [185, 190],
+            str(travel_time_formatted) +" to " + str(return_time_formatted): [445, 190],
+            str(first_part_of_purpose): base_coordinates_first_part,
+            str(second_part_of_purpose): base_coordinates_second_part,
+            str(driver_name): [185, 233],
+            str(vehicle_plate_number) + " " + str(vehicle_model): [438, 233]
+        }
+
+        for text, coordinates in requestform_text_annotations.items():
+            page.insert_text(coordinates, text, fontname="Helvetica", fontsize=8)
+
+        requestform_doc.save(os.path.join(MEDIA_ROOT, f"documents/requestform{instance.request_id}.pdf"))
+        requestform_doc.close()
+
+        trip.requestform_pdf = f"documents/requestform{instance.request_id}.pdf"
         trip.save()
 
         serializer = self.get_serializer(instance, data=request.data, partial=True)
@@ -1050,33 +1344,67 @@ class RequestCancelView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        existing_requests = Request.objects.filter(request_id=instance.merged_with)
-        for existing_request in existing_requests:
+        if instance.main_merge == True:
+            merged_with_list = [int(item) for item in instance.merged_with.split(',')]
 
-            if existing_request.merged_with is not None:
+            existing_requests = Request.objects.filter(request_id__in=merged_with_list)
+            
+            for existing_request in existing_requests:
                 
-                 # Create a regular expression pattern that matches the request_id along with its preceding comma
-                pattern = r',\s*' + str(instance.request_id)
-                
-                # Use the re.sub() function to replace the matched pattern with an empty string
-                existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
 
-                # If the string starts with a comma, remove it
-                if existing_request.merged_with.startswith(','):
-                    existing_request.merged_with = existing_request.merged_with[1:]
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
 
-                if existing_request.merged_with == '':
-                    # If the string is empty after the removal, set merged_with to None
-                    existing_request.merged_with = None
-                vehicle_capacity = existing_request.vehicle_capacity
-                number_of_passenger = instance.number_of_passenger
-                undo_vacant = vehicle_capacity + number_of_passenger
-                existing_request.vehicle_capacity = undo_vacant
-                instance.main_merge = False
-                instance.merged_with = None
-                instance.save()
-                
-            existing_request.save()
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    
+                    first_request = existing_requests.first()
+                    first_request.main_merge = True
+                    first_request.save()
+                    
+                    existing_request.merged_with = merged_with_list
+                    instance.save()
+                    
+                existing_request.save()
+        else:
+            existing_requests = Request.objects.filter(request_id=instance.merged_with)
+            for existing_request in existing_requests:
+
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
+
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    instance.save()
+                    
+                existing_request.save()
 
         if not is_from_office_staff:
 
@@ -1195,6 +1523,7 @@ class VehicleMaintenance(generics.CreateAPIView):
             purpose='Vehicle Maintenance',
             status= 'Ongoing Vehicle Maintenance',
             vehicle= vehicle,
+            passenger_name=[] 
         )
 
         new_request.vehicle_driver_status_id = vehicle_driver_status
@@ -1246,28 +1575,13 @@ class VehicleMaintenance(generics.CreateAPIView):
                         'message': f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause."
                     }
                 )
+                subject='Vehicle Maintenance'
+                message=f"We regret to inform you that the vehicle you reserved for the date {travel_date_formatted}, {travel_time_formatted} to {return_date_formatted}, {return_time_formatted} is currently undergoing unexpected maintenance. We apologize for any inconvenience this may cause. Please open your Vehi-Sched account for further information. Thank you!"
+                from_email = settings.EMAIL_HOST_USER
+                to_email = request.requester_name.email
+
+                send_mail(subject, message, from_email, [to_email])
             filtered_requests.update(status='Awaiting Vehicle Alteration')
-
-            
-
-
-            
-
-
-
-    #     notification = Notification(
-    #         owner=self.request.user,
-    #         subject=f"Request {new_request.request_id} has been created",
-    #     )
-    #     notification.save()
-
-    #     async_to_sync(channel_layer.group_send)(
-    #     'notifications', 
-    #     {
-    #         'type': 'notify.request_canceled',
-    #         'message': f"A new request has been created by {self.request.user}",
-    #     }
-    # )
         
        
         return Response(RequestSerializer(new_request).data, status=201)
@@ -1426,33 +1740,67 @@ class RejectRequestView(generics.UpdateAPIView):
         existing_vehicle_driver_status.status = 'Available'
         existing_vehicle_driver_status.save()
 
-        existing_requests = Request.objects.filter(request_id=instance.merged_with)
-        for existing_request in existing_requests:
+        if instance.main_merge == True:
+            merged_with_list = [int(item) for item in instance.merged_with.split(',')]
 
-            if existing_request.merged_with is not None:
+            existing_requests = Request.objects.filter(request_id__in=merged_with_list)
+            
+            for existing_request in existing_requests:
                 
-                 # Create a regular expression pattern that matches the request_id along with its preceding comma
-                pattern = r',\s*' + str(instance.request_id)
-                
-                # Use the re.sub() function to replace the matched pattern with an empty string
-                existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
 
-                # If the string starts with a comma, remove it
-                if existing_request.merged_with.startswith(','):
-                    existing_request.merged_with = existing_request.merged_with[1:]
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
 
-                if existing_request.merged_with == '':
-                    # If the string is empty after the removal, set merged_with to None
-                    existing_request.merged_with = None
-                vehicle_capacity = existing_request.vehicle_capacity
-                number_of_passenger = instance.number_of_passenger
-                undo_vacant = vehicle_capacity + number_of_passenger
-                existing_request.vehicle_capacity = undo_vacant
-                instance.main_merge = False
-                instance.merged_with = None
-                instance.save()
-                
-            existing_request.save()
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    
+                    first_request = existing_requests.first()
+                    first_request.main_merge = True
+                    first_request.save()
+                    
+                    existing_request.merged_with = merged_with_list
+                    instance.save()
+                    
+                existing_request.save()
+        else:
+            existing_requests = Request.objects.filter(request_id=instance.merged_with)
+            for existing_request in existing_requests:
+
+                if existing_request.merged_with is not None:
+                    
+                    # Create a regular expression pattern that matches the request_id along with its preceding comma
+                    pattern = r',\s*' + str(instance.request_id)
+                    
+                    # Use the re.sub() function to replace the matched pattern with an empty string
+                    existing_request.merged_with = re.sub(pattern, '', existing_request.merged_with)
+
+                    # If the string starts with a comma, remove it
+                    if existing_request.merged_with.startswith(','):
+                        existing_request.merged_with = existing_request.merged_with[1:]
+
+                    if existing_request.merged_with == '':
+                        # If the string is empty after the removal, set merged_with to None
+                        existing_request.merged_with = None
+                    vehicle_capacity = existing_request.vehicle_capacity
+                    number_of_passenger = instance.number_of_passenger
+                    undo_vacant = vehicle_capacity + number_of_passenger
+                    existing_request.vehicle_capacity = undo_vacant
+                    instance.save()
+                    
+                existing_request.save()
 
         reason = request.data.get('reason')
 

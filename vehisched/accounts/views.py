@@ -159,8 +159,7 @@ class RequesterListView(generics.ListAPIView):
 
     def get_queryset(self):
         requester = self.request.GET.get('requester')
-        requester_role = Role.objects.get(role_name='requester')
-        queryset = User.objects.filter(role=requester_role).exclude(id=requester)
+        queryset = User.objects.filter(role__role_name__in=['requester', 'vip']).exclude(id=requester)
         return queryset
     
 

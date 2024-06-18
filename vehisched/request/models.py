@@ -81,7 +81,6 @@ class Question(models.Model):
     def __str__(self):
         return self.question_number
 
-
 class Answer(models.Model):
     request = models.ForeignKey(Request, on_delete=models.SET_NULL, null=True, blank=True)
     question = models.ForeignKey(Question, on_delete=models.CASCADE, null=True, blank=True)
@@ -91,6 +90,24 @@ class Answer(models.Model):
     def __str__(self):
         return self.answer
     
+class AddressFromGoogleMap(models.Model):
+    place_id = models.CharField(max_length=1000, primary_key=True)
+    full_address = models.CharField(max_length=1000, null=True, blank=True)
+    distance = models.FloatField(null=True, blank=True)
+    travel_date = models.DateField(null=True, blank=True)
+    travel_time = models.TimeField(null=True, blank=True)
+    estimated_arrival_date_to_destination = models.DateField(null=True, blank=True)
+    estimated_arrival_time_to_destination = models.TimeField(null=True, blank=True)
+    estimated_return_date_to_ustp = models.DateField(null=True, blank=True)
+    estimated_return_time_to_ustp = models.TimeField(null=True, blank=True)
+    travel_return_date_gap_in_milliseconds = models.FloatField(null=True, blank=True)
+    travel_return_date_gap_in_seconds = models.FloatField(null=True, blank=True)
+    travel_return_date_gap_in_minutes = models.FloatField(null=True, blank=True)
+    travel_return_date_gap_in_hours = models.FloatField(null=True, blank=True)
+    travel_return_date_gap_in_days = models.FloatField(null=True, blank=True)
+
+    def __str__(self):
+        return self.full_address
 
 @receiver(post_migrate)
 def create_travel_types(sender, **kwargs):
