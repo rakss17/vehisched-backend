@@ -1,0 +1,2562 @@
+openapi: 3.0.3
+info:
+  title: Vehi-Sched API
+  version: 1.0.0
+  description: Vehicle scheduling and reservation system.
+paths:
+  /api/v1/accounts/admin/:
+    get:
+      operationId: api_v1_accounts_admin_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FetchedUser'
+          description: ''
+  /api/v1/accounts/change_password/:
+    post:
+      operationId: api_v1_accounts_change_password_create
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/accounts/create-list-office/:
+    get:
+      operationId: api_v1_accounts_create_list_office_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Office'
+          description: ''
+    post:
+      operationId: api_v1_accounts_create_list_office_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Office'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Office'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Office'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Office'
+          description: ''
+  /api/v1/accounts/delete/{id}/:
+    delete:
+      operationId: api_v1_accounts_delete_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/accounts/drivers/:
+    get:
+      operationId: api_v1_accounts_drivers_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FetchedUser'
+          description: ''
+  /api/v1/accounts/fetch-vip/:
+    get:
+      operationId: api_v1_accounts_fetch_vip_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FetchedUser'
+          description: ''
+  /api/v1/accounts/me/:
+    get:
+      operationId: api_v1_accounts_me_retrieve
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FetchedUser'
+          description: ''
+  /api/v1/accounts/requesters/:
+    get:
+      operationId: api_v1_accounts_requesters_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FetchedUser'
+          description: ''
+  /api/v1/accounts/roles/by-name/:
+    get:
+      operationId: api_v1_accounts_roles_by_name_retrieve
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleByName'
+          description: ''
+  /api/v1/accounts/toggle_activation/{id}/:
+    post:
+      operationId: api_v1_accounts_toggle_activation_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/accounts/token/login/:
+    post:
+      operationId: api_v1_accounts_token_login_create
+      description: Use this endpoint to obtain user authentication token.
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenCreate'
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenCreate'
+          description: ''
+  /api/v1/accounts/token/logout/:
+    post:
+      operationId: api_v1_accounts_token_logout_create
+      description: Use this endpoint to logout user (remove user authentication token).
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/accounts/update/{id}/:
+    put:
+      operationId: api_v1_accounts_update_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    patch:
+      operationId: api_v1_accounts_update_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdate'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+  /api/v1/accounts/users/:
+    get:
+      operationId: api_v1_accounts_users_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+          description: ''
+    post:
+      operationId: api_v1_accounts_users_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomUser'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomUser'
+          description: ''
+  /api/v1/accounts/users/{id}/:
+    get:
+      operationId: api_v1_accounts_users_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_v1_accounts_users_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: api_v1_accounts_users_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: api_v1_accounts_users_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/accounts/users/activation/:
+    post:
+      operationId: api_v1_accounts_users_activation_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Activation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Activation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Activation'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activation'
+          description: ''
+  /api/v1/accounts/users/me/:
+    get:
+      operationId: api_v1_accounts_users_me_retrieve
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: api_v1_accounts_users_me_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: api_v1_accounts_users_me_partial_update
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUser'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: api_v1_accounts_users_me_destroy
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/accounts/users/resend_activation/:
+    post:
+      operationId: api_v1_accounts_users_resend_activation_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailReset'
+          description: ''
+  /api/v1/accounts/users/reset_password/:
+    post:
+      operationId: api_v1_accounts_users_reset_password_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailReset'
+          description: ''
+  /api/v1/accounts/users/reset_password_confirm/:
+    post:
+      operationId: api_v1_accounts_users_reset_password_confirm_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirm'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirm'
+          description: ''
+  /api/v1/accounts/users/reset_username/:
+    post:
+      operationId: api_v1_accounts_users_reset_username_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendEmailReset'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailReset'
+          description: ''
+  /api/v1/accounts/users/reset_username_confirm/:
+    post:
+      operationId: api_v1_accounts_users_reset_username_confirm_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsernameResetConfirm'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UsernameResetConfirm'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UsernameResetConfirm'
+        required: true
+      security:
+      - tokenAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsernameResetConfirm'
+          description: ''
+  /api/v1/accounts/users/set_password/:
+    post:
+      operationId: api_v1_accounts_users_set_password_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetPassword'
+          description: ''
+  /api/v1/accounts/users/set_username/:
+    post:
+      operationId: api_v1_accounts_users_set_username_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetUsername'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SetUsername'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SetUsername'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetUsername'
+          description: ''
+  /api/v1/notification/fetch/:
+    get:
+      operationId: api_v1_notification_fetch_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/request/answer/:
+    get:
+      operationId: api_v1_request_answer_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Answer'
+          description: ''
+    post:
+      operationId: api_v1_request_answer_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Answer'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Answer'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Answer'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Answer'
+          description: ''
+  /api/v1/request/approve/{request_id}/:
+    put:
+      operationId: api_v1_request_approve_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_approve_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/cancel/{request_id}/:
+    put:
+      operationId: api_v1_request_cancel_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_cancel_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/change-request-driver/{request_id}/:
+    put:
+      operationId: api_v1_request_change_request_driver_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: api_v1_request_change_request_driver_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/request/driver-absence/:
+    post:
+      operationId: api_v1_request_driver_absence_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/fetch/:
+    get:
+      operationId: api_v1_request_fetch_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestOfficeStaff'
+          description: ''
+  /api/v1/request/fetch-post/:
+    get:
+      operationId: api_v1_request_fetch_post_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Request'
+          description: ''
+    post:
+      operationId: api_v1_request_fetch_post_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/maintenance-absence-completed/{request_id}/:
+    put:
+      operationId: api_v1_request_maintenance_absence_completed_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_maintenance_absence_completed_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/questions/:
+    get:
+      operationId: api_v1_request_questions_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/request/reject-request/{request_id}/:
+    put:
+      operationId: api_v1_request_reject_request_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_reject_request_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/reschedule/{request_id}/:
+    put:
+      operationId: api_v1_request_reschedule_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_reschedule_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/submit-trip-merge/{request_id}/:
+    put:
+      operationId: api_v1_request_submit_trip_merge_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_request_submit_trip_merge_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/request/vehicle-maintenance/:
+    post:
+      operationId: api_v1_request_vehicle_maintenance_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/trip/accept-vehicle/{request_id}/:
+    put:
+      operationId: api_v1_trip_accept_vehicle_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_trip_accept_vehicle_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/trip/check-driver-availability/:
+    get:
+      operationId: api_v1_trip_check_driver_availability_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/check-return-time-availability/:
+    get:
+      operationId: api_v1_trip_check_return_time_availability_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/check-schedule-conflicts-for-oneway/:
+    get:
+      operationId: api_v1_trip_check_schedule_conflicts_for_oneway_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/check-time-availability/:
+    get:
+      operationId: api_v1_trip_check_time_availability_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/check-vehicle-availability/:
+    get:
+      operationId: api_v1_trip_check_vehicle_availability_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/driver-own-schedule/:
+    get:
+      operationId: api_v1_trip_driver_own_schedule_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/driver-schedules/:
+    get:
+      operationId: api_v1_trip_driver_schedules_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/driver-trips-schedule/:
+    get:
+      operationId: api_v1_trip_driver_trips_schedule_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/fetch-office-staff/:
+    get:
+      operationId: api_v1_trip_fetch_office_staff_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/fetch-requester/:
+    get:
+      operationId: api_v1_trip_fetch_requester_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/on-trips-gateguard/:
+    get:
+      operationId: api_v1_trip_on_trips_gateguard_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/recent-trips-gateguard/:
+    get:
+      operationId: api_v1_trip_recent_trips_gateguard_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/trip/trip-scanned/{request_id}/:
+    put:
+      operationId: api_v1_trip_trip_scanned_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Request'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Request'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+    patch:
+      operationId: api_v1_trip_trip_scanned_partial_update
+      parameters:
+      - in: path
+        name: request_id
+        schema:
+          type: integer
+        description: A unique integer value identifying this request.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+          description: ''
+  /api/v1/trip/vehicle-schedules/:
+    get:
+      operationId: api_v1_trip_vehicle_schedules_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/vehicles/another-vehicle/:
+    get:
+      operationId: api_v1_vehicles_another_vehicle_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+          description: ''
+  /api/v1/vehicles/check-vehicle-on-process/:
+    get:
+      operationId: api_v1_vehicles_check_vehicle_on_process_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/vehicles/fetch-each-vehicle-schedule/:
+    get:
+      operationId: api_v1_vehicles_fetch_each_vehicle_schedule_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestOfficeStaff'
+          description: ''
+  /api/v1/vehicles/fetch-post/:
+    get:
+      operationId: api_v1_vehicles_fetch_post_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Vehicle'
+          description: ''
+    post:
+      operationId: api_v1_vehicles_fetch_post_create
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+          description: ''
+  /api/v1/vehicles/fetch-vehicle-vip/:
+    get:
+      operationId: api_v1_vehicles_fetch_vehicle_vip_list
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestOfficeStaff'
+          description: ''
+    post:
+      operationId: api_v1_vehicles_fetch_vehicle_vip_create
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RequestOfficeStaff'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RequestOfficeStaff'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestOfficeStaff'
+          description: ''
+  /api/v1/vehicles/heartbeat-on-process-vehicle/{id}/:
+    put:
+      operationId: api_v1_vehicles_heartbeat_on_process_vehicle_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+    patch:
+      operationId: api_v1_vehicles_heartbeat_on_process_vehicle_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/vehicles/update-delete/{plate_number}/:
+    get:
+      operationId: api_v1_vehicles_update_delete_retrieve
+      parameters:
+      - in: path
+        name: plate_number
+        schema:
+          type: string
+        description: A unique value identifying this vehicle.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+          description: ''
+    put:
+      operationId: api_v1_vehicles_update_delete_update
+      parameters:
+      - in: path
+        name: plate_number
+        schema:
+          type: string
+        description: A unique value identifying this vehicle.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+          description: ''
+    patch:
+      operationId: api_v1_vehicles_update_delete_partial_update
+      parameters:
+      - in: path
+        name: plate_number
+        schema:
+          type: string
+        description: A unique value identifying this vehicle.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVehicle'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVehicle'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+          description: ''
+    delete:
+      operationId: api_v1_vehicles_update_delete_destroy
+      parameters:
+      - in: path
+        name: plate_number
+        schema:
+          type: string
+        description: A unique value identifying this vehicle.
+        required: true
+      tags:
+      - api
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Activation:
+      type: object
+      properties:
+        uid:
+          type: string
+        token:
+          type: string
+      required:
+      - token
+      - uid
+    Answer:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        suggestions:
+          type: string
+          nullable: true
+        answer:
+          type: string
+          nullable: true
+        request:
+          type: integer
+          nullable: true
+        question:
+          type: string
+          nullable: true
+      required:
+      - id
+    BlankEnum:
+      enum:
+      - ''
+    CustomUser:
+      type: object
+      properties:
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        middle_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+        mobile_number:
+          type: integer
+          writeOnly: true
+        office:
+          type: string
+          writeOnly: true
+      required:
+      - mobile_number
+      - office
+      - password
+      - role
+      - username
+    FetchedUser:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        role:
+          type: string
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        middle_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 150
+        mobile_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        office:
+          type: string
+          nullable: true
+          readOnly: true
+      required:
+      - id
+      - office
+      - role
+      - username
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        subject:
+          type: string
+          nullable: true
+          maxLength: 1000
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        read_status:
+          type: boolean
+        travel_datetime:
+          type: string
+          format: date-time
+          nullable: true
+        purpose:
+          type: string
+          nullable: true
+          maxLength: 1000
+        owner:
+          type: integer
+          nullable: true
+      required:
+      - created_at
+      - id
+    NullEnum:
+      enum:
+      - null
+    Office:
+      type: object
+      properties:
+        office_id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          nullable: true
+          maxLength: 255
+      required:
+      - office_id
+    PasswordResetConfirm:
+      type: object
+      properties:
+        uid:
+          type: string
+        token:
+          type: string
+        new_password:
+          type: string
+      required:
+      - new_password
+      - token
+      - uid
+    PatchedRequest:
+      type: object
+      properties:
+        request_id:
+          type: integer
+          readOnly: true
+        travel_date:
+          type: string
+          format: date
+          nullable: true
+        travel_time:
+          type: string
+          format: time
+          nullable: true
+        return_date:
+          type: string
+          format: date
+          nullable: true
+        return_time:
+          type: string
+          format: time
+          nullable: true
+        destination:
+          type: string
+          nullable: true
+          maxLength: 255
+        office:
+          type: string
+          nullable: true
+          maxLength: 255
+        number_of_passenger:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        passenger_name:
+          type: string
+          nullable: true
+          description: List of passenger names in JSON format
+        purpose:
+          type: string
+          nullable: true
+          maxLength: 1000
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        vehicle:
+          type: string
+          nullable: true
+        date_reserved:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        driver_full_name:
+          type: string
+          nullable: true
+          readOnly: true
+        type:
+          type: string
+          nullable: true
+          readOnly: true
+        driver_mobile_number:
+          type: string
+          nullable: true
+          readOnly: true
+        distance:
+          type: number
+          format: double
+          nullable: true
+        vehicle_driver_status:
+          type: string
+          nullable: true
+          readOnly: true
+        main_merge:
+          type: boolean
+    PatchedUser:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+    PatchedUserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        middle_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 150
+        mobile_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        office:
+          type: string
+          nullable: true
+    PatchedVehicle:
+      type: object
+      properties:
+        plate_number:
+          type: string
+          maxLength: 255
+        vip_assigned_to:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          nullable: true
+        driver_assigned_to:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          nullable: true
+        model:
+          type: string
+          nullable: true
+          maxLength: 255
+        type:
+          type: string
+          nullable: true
+          maxLength: 255
+        capacity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        is_vip:
+          type: boolean
+        image:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+    Request:
+      type: object
+      properties:
+        request_id:
+          type: integer
+          readOnly: true
+        travel_date:
+          type: string
+          format: date
+          nullable: true
+        travel_time:
+          type: string
+          format: time
+          nullable: true
+        return_date:
+          type: string
+          format: date
+          nullable: true
+        return_time:
+          type: string
+          format: time
+          nullable: true
+        destination:
+          type: string
+          nullable: true
+          maxLength: 255
+        office:
+          type: string
+          nullable: true
+          maxLength: 255
+        number_of_passenger:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        passenger_name:
+          type: string
+          nullable: true
+          description: List of passenger names in JSON format
+        purpose:
+          type: string
+          nullable: true
+          maxLength: 1000
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        vehicle:
+          type: string
+          nullable: true
+        date_reserved:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        driver_full_name:
+          type: string
+          nullable: true
+          readOnly: true
+        type:
+          type: string
+          nullable: true
+          readOnly: true
+        driver_mobile_number:
+          type: string
+          nullable: true
+          readOnly: true
+        distance:
+          type: number
+          format: double
+          nullable: true
+        vehicle_driver_status:
+          type: string
+          nullable: true
+          readOnly: true
+        main_merge:
+          type: boolean
+      required:
+      - date_reserved
+      - driver_full_name
+      - driver_mobile_number
+      - request_id
+      - type
+      - vehicle_driver_status
+    RequestOfficeStaff:
+      type: object
+      properties:
+        request_id:
+          type: integer
+          readOnly: true
+        requester_full_name:
+          type: string
+          nullable: true
+          readOnly: true
+        requester_id:
+          type: string
+          nullable: true
+          readOnly: true
+        travel_date:
+          type: string
+          format: date
+          nullable: true
+        travel_time:
+          type: string
+          format: time
+          nullable: true
+        return_date:
+          type: string
+          format: date
+          nullable: true
+        return_time:
+          type: string
+          format: time
+          nullable: true
+        destination:
+          type: string
+          nullable: true
+          maxLength: 255
+        office:
+          type: string
+          nullable: true
+          maxLength: 255
+        number_of_passenger:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        passenger_name:
+          type: string
+          nullable: true
+          description: List of passenger names in JSON format
+        purpose:
+          type: string
+          nullable: true
+          maxLength: 1000
+        status:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        vehicle:
+          type: string
+          nullable: true
+        vehicle_model:
+          type: string
+          nullable: true
+          readOnly: true
+        date_reserved:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        driver_full_name:
+          type: string
+          nullable: true
+          readOnly: true
+        type:
+          type: string
+          nullable: true
+          readOnly: true
+        distance:
+          type: number
+          format: double
+          nullable: true
+        vehicle_driver_status:
+          type: string
+          nullable: true
+          readOnly: true
+        departure_time_from_office:
+          type: string
+          nullable: true
+          readOnly: true
+        arrival_time_to_office:
+          type: string
+          nullable: true
+          readOnly: true
+        driver_id:
+          type: string
+          nullable: true
+          readOnly: true
+        vehicle_capacity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        merged_with:
+          type: string
+          nullable: true
+        main_merge:
+          type: boolean
+      required:
+      - arrival_time_to_office
+      - date_reserved
+      - departure_time_from_office
+      - driver_full_name
+      - driver_id
+      - request_id
+      - requester_full_name
+      - requester_id
+      - type
+      - vehicle_driver_status
+      - vehicle_model
+    RoleByName:
+      type: object
+      properties:
+        role_name:
+          type: string
+      required:
+      - role_name
+    RoleEnum:
+      enum:
+      - admin
+      - requester
+      - vip
+      - driver
+      - gate guard
+      - office staff
+      type: string
+      description: |-
+        * `admin` - admin
+        * `requester` - requester
+        * `vip` - vip
+        * `driver` - driver
+        * `gate guard` - gate guard
+        * `office staff` - office staff
+    SendEmailReset:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    SetPassword:
+      type: object
+      properties:
+        new_password:
+          type: string
+        current_password:
+          type: string
+      required:
+      - current_password
+      - new_password
+    SetUsername:
+      type: object
+      properties:
+        current_password:
+          type: string
+        new_username:
+          type: string
+          title: Username
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+      required:
+      - current_password
+      - new_username
+    StatusEnum:
+      enum:
+      - Approved
+      - Approved - Alterate Vehicle
+      - Pending
+      - Canceled
+      - Rescheduled
+      - Completed
+      - Rejected
+      - Awaiting Vehicle Alteration
+      - Awaiting Rescheduling
+      - Ongoing Vehicle Maintenance
+      - Driver Absence
+      type: string
+      description: |-
+        * `Approved` - Approved
+        * `Approved - Alterate Vehicle` - Approved - Alterate Vehicle
+        * `Pending` - Pending
+        * `Canceled` - Canceled
+        * `Rescheduled` - Rescheduled
+        * `Completed` - Completed
+        * `Rejected` - Rejected
+        * `Awaiting Vehicle Alteration` - Awaiting Vehicle Alteration
+        * `Awaiting Rescheduling` - Awaiting Rescheduling
+        * `Ongoing Vehicle Maintenance` - Ongoing Vehicle Maintenance
+        * `Driver Absence` - Driver Absence
+    TokenCreate:
+      type: object
+      properties:
+        password:
+          type: string
+        username:
+          type: string
+    User:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+      required:
+      - id
+      - username
+    UserUpdate:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        middle_name:
+          type: string
+          nullable: true
+          maxLength: 255
+        last_name:
+          type: string
+          maxLength: 150
+        mobile_number:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        role:
+          $ref: '#/components/schemas/RoleEnum'
+        office:
+          type: string
+          nullable: true
+      required:
+      - office
+      - role
+      - username
+    UsernameResetConfirm:
+      type: object
+      properties:
+        new_username:
+          type: string
+          title: Username
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+      required:
+      - new_username
+    Vehicle:
+      type: object
+      properties:
+        plate_number:
+          type: string
+          maxLength: 255
+        vip_assigned_to:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          nullable: true
+        driver_assigned_to:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          nullable: true
+        model:
+          type: string
+          nullable: true
+          maxLength: 255
+        type:
+          type: string
+          nullable: true
+          maxLength: 255
+        capacity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+          nullable: true
+        is_vip:
+          type: boolean
+        image:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+      required:
+      - created_at
+      - driver_assigned_to
+      - plate_number
+      - vip_assigned_to
+  securitySchemes:
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"

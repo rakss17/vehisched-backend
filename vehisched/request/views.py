@@ -25,6 +25,7 @@ import re
 from dotenv import load_dotenv
 import os
 from django.core.mail import send_mail
+from trip.serializers import DummySerializer
 
 MEDIA_ROOT = settings.MEDIA_ROOT
 
@@ -974,6 +975,7 @@ class RequestListCreateView(generics.ListCreateAPIView):
 #             Answer.objects.create(question=question, content=question_data['answers'])
 
 class QuestionList(generics.ListAPIView):
+   serializer_class = DummySerializer
    def get(self, request):
        questions = Question.objects.all()
        serializer = Question2Serializer(questions, many=True)
@@ -1847,6 +1849,7 @@ class MergeTripView(generics.UpdateAPIView):
     
 class ChangeRequestDriverView(generics.UpdateAPIView):
     queryset = Request.objects.all()
+    serializer_class = DummySerializer
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()

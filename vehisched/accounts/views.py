@@ -14,7 +14,9 @@ from rest_framework.response import Response
 from .serializers import ChangePasswordSerializer
 from django.contrib.auth import update_session_auth_hash
 from django.http import HttpResponseRedirect
-
+from trip.serializers import DummySerializer
+from trip.serializers import DummySerializer
+from drf_spectacular.utils import extend_schema
 
 User = get_user_model()
 
@@ -137,6 +139,7 @@ class UserUpdateView(generics.UpdateAPIView):
 
 class UserDeleteView(generics.DestroyAPIView):
     queryset = User.objects.all()
+    serializer_class = DummySerializer
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -183,6 +186,10 @@ class OfficeListCreateView(generics.ListCreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
+@extend_schema(
+    request=DummySerializer,  
+    responses=DummySerializer 
+)    
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_password(request):
@@ -202,6 +209,10 @@ def reset_password_redirection(request, uidb64, token):
     url = f'{settings.FRONTEND_URL}/#/ResetPassword/{uidb64}/{token}'
     return HttpResponseRedirect(url)
 
+@extend_schema(
+    request=DummySerializer,  
+    responses=DummySerializer 
+)
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def toggle_user_activation(request, pk):

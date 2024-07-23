@@ -25,7 +25,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2!ybo2mbakao%7u5znbp!c-mhthyhb3(yec(=^w(u)c@+agiow'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
@@ -159,7 +161,18 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.TokenAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Vehi-Sched API',
+    'DESCRIPTION': 'Vehicle scheduling and reservation system.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'SWAGGER_UI_DIST': 'SIDECAR',
+    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+    'REDOC_DIST': 'SIDECAR',
 }
 
 DJOSER = {
@@ -169,7 +182,7 @@ DJOSER = {
     'ACTIVATION_URL': 'api/v1/accounts/activation/{uid}/{token}',
     'PASSWORD_RESET_CONFIRM_URL': 'api/v1/accounts/reset_password/{uid}/{token}',
     'SERIALIZERS': {
-        'user_create': 'accounts.serializers.UserSerializer',
+        'user_create': 'accounts.serializers.CustomUserSerializer',
     },
 }
 

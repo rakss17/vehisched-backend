@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import User, Role, Office
+from typing import Optional
 
 
-class UserSerializer(serializers.ModelSerializer):
+class CustomUserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         style={"input_type": "password"}, write_only=True)
     mobile_number = serializers.IntegerField(write_only=True)
@@ -52,7 +53,7 @@ class FetchedUserSerializer(serializers.ModelSerializer):
         source='role.role_name', read_only=True)
     office = serializers.SerializerMethodField()
 
-    def get_office(self, obj):
+    def get_office(self, obj)-> Optional[str]:
         if obj.office:
             office = obj.office
             office = office.name

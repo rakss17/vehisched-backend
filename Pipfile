@@ -21,6 +21,7 @@ pymupdf = "*"
 qrcode = {extras = ["pil"], version = "*"}
 numpy = "*"
 whitenoise = "*"
+drf-spectacular = {extras = ["sidecar"], version = "*"}
 
 [dev-packages]
 

@@ -17,10 +17,12 @@ from django.utils import timezone
 from django.http import FileResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
+from .serializers import DummySerializer
 import re
 
 
 class ScheduleRequesterView(generics.ListAPIView):
+    serializer_class = DummySerializer
     
     def get(self, request, *args, **kwargs):
         trip_data = []
@@ -169,6 +171,7 @@ class ScheduleRequesterView(generics.ListAPIView):
         
 
 class ScheduleOfficeStaffView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
         trip_data = []
         trips = Request.objects.filter(status__in=["Approved", "Rescheduled", "Approved - Alterate Vehicle"])
@@ -205,6 +208,7 @@ class ScheduleOfficeStaffView(generics.ListAPIView):
 
 
 class CheckVehicleAvailability(generics.ListAPIView):
+    serializer_class = DummySerializer
         
     def get(self, request, *args, **kwargs):
         def convert_time(time_string):
@@ -271,6 +275,7 @@ class CheckVehicleAvailability(generics.ListAPIView):
 
     
 class CheckDriverAvailability(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
         preferred_end_travel_date = self.request.GET.get('preferred_end_travel_date')
@@ -311,6 +316,7 @@ class CheckDriverAvailability(generics.ListAPIView):
         return JsonResponse(available_drivers, safe=False)
     
 class CheckTimeAvailability(generics.ListAPIView):
+    serializer_class = DummySerializer
     
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = datetime.strptime(self.request.GET.get('preferred_start_travel_date'), "%Y-%m-%d")
@@ -643,6 +649,7 @@ class CheckTimeAvailability(generics.ListAPIView):
 
 
 class CheckReturnTimeAvailability(generics.ListAPIView):
+    serializer_class = DummySerializer
     
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
@@ -760,6 +767,7 @@ class CheckReturnTimeAvailability(generics.ListAPIView):
         
     
 class CheckScheduleConflictsForOneway(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
         preferred_start_travel_time = self.request.GET.get('preferred_start_travel_time')
@@ -799,6 +807,7 @@ class CheckScheduleConflictsForOneway(generics.ListAPIView):
     
 
 class VehicleSchedulesView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
         plate_number = self.request.GET.get('plate_number')
         trip_data = []
@@ -846,6 +855,7 @@ class VehicleSchedulesView(generics.ListAPIView):
         return JsonResponse(sorted_trip_data , safe=False)
 
 class DriverSchedulesView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
         driver_id = self.request.GET.get('driver_id')
         trip_data = []
@@ -1033,6 +1043,7 @@ class TripScannedView(generics.UpdateAPIView):
     
 
 class OnTripsGateGuardView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
       
         vehicle_driver_statuses = Vehicle_Driver_Status.objects.filter(status='On Trip')
@@ -1087,6 +1098,7 @@ class OnTripsGateGuardView(generics.ListAPIView):
         return JsonResponse(results, safe=False)
 
 class RecentLogsGateGuardView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
       
         recent_tripss = Request.objects.filter(status__in=['Completed'], vehicle_driver_status_id__status__in=['Available']).exclude(
@@ -1146,6 +1158,7 @@ class RecentLogsGateGuardView(generics.ListAPIView):
         return JsonResponse(results, safe=False)
 
 class DriverOwnScheduleView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
       
         recent_tripss = Request.objects.filter(status__in=['Approved', 'Approved - Alterate Vehicle', 'Rescheduled'], driver_name=request.user).exclude(
@@ -1204,6 +1217,7 @@ class DriverOwnScheduleView(generics.ListAPIView):
         return JsonResponse(results, safe=False)
 
 class DriverTripsView(generics.ListAPIView):
+    serializer_class = DummySerializer
     def get(self, request, *args, **kwargs):
       
         recent_tripss = Request.objects.filter(status__in=['Completed', 'Canceled', 'Rescheduled'], driver_name=request.user).exclude(

@@ -3,6 +3,7 @@ from .models import Request, Question, Answer
 from vehicle.models import Vehicle
 from django.utils.timezone import localtime
 import pytz, re
+from typing import Optional
 
 class RequestSerializer(serializers.ModelSerializer):
     driver_full_name = serializers.SerializerMethodField()
@@ -10,26 +11,26 @@ class RequestSerializer(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
     vehicle_driver_status = serializers.SerializerMethodField()
 
-    def get_driver_full_name(self, obj):
+    def get_driver_full_name(self, obj)-> Optional[str]:
         if obj.driver_name:
             driver = obj.driver_name
             driver_full_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
             return driver_full_name
         return None
-    def get_driver_mobile_number(self, obj):
+    def get_driver_mobile_number(self, obj)-> Optional[str]:
         if obj.driver_name:
             driver = obj.driver_name
             driver_mobile_number = driver.mobile_number
             return driver_mobile_number
         return None
     
-    def get_type(self, obj):
+    def get_type(self, obj)-> Optional[str]:
         if obj.type:
             type = obj.type
             type = type.name
             return type
         return None
-    def get_vehicle_driver_status(self, obj):
+    def get_vehicle_driver_status(self, obj)-> Optional[str]:
         if obj.vehicle_driver_status_id:
             vehicle_driver_status = obj.vehicle_driver_status_id
             vehicle_driver_status = vehicle_driver_status.status
@@ -78,55 +79,55 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
     driver_id = serializers.SerializerMethodField()
     vehicle_model = serializers.SerializerMethodField()
 
-    def get_driver_full_name(self, obj):
+    def get_driver_full_name(self, obj)-> Optional[str]:
         if obj.driver_name:
             driver = obj.driver_name
             driver_full_name = f"{driver.last_name}, {driver.first_name} {driver.middle_name}"
             return driver_full_name
         return None
-    def get_driver_id(self, obj):
+    def get_driver_id(self, obj)-> Optional[str]:
         if obj.driver_name:
             driver= obj.driver_name
             driver_id = driver.id
             return driver_id
         return None
     
-    def get_requester_full_name(self, obj):
+    def get_requester_full_name(self, obj)-> Optional[str]:
         if obj.requester_name:
             requester = obj.requester_name
             requester_full_name = f"{requester.last_name}, {requester.first_name} {requester.middle_name}"
             return requester_full_name
         return None
     
-    def get_requester_id(self, obj):
+    def get_requester_id(self, obj)-> Optional[str]:
         if obj.requester_name:
             requester = obj.requester_name
             requester_id = requester.id
             return requester_id
         return None
     
-    def get_type(self, obj):
+    def get_type(self, obj)-> Optional[str]:
         if obj.type:
             type = obj.type
             type = type.name
             return type
         return None
     
-    def get_vehicle_driver_status(self, obj):
+    def get_vehicle_driver_status(self, obj)-> Optional[str]:
         if obj.vehicle_driver_status_id:
             vehicle_driver_status = obj.vehicle_driver_status_id
             vehicle_driver_status = vehicle_driver_status.status
             return vehicle_driver_status
         return None
     
-    def get_vehicle_model(self, obj):
+    def get_vehicle_model(self, obj)-> Optional[str]:
         if obj.vehicle:
             vehicle = obj.vehicle
             vehicle_model = vehicle.model
             return vehicle_model
         return None
     
-    def get_departure_time_from_office(self, obj):
+    def get_departure_time_from_office(self, obj)-> Optional[str]:
         if hasattr(obj, 'trip') and obj.trip.departure_time_from_office is not None:
             departure_time = obj.trip.departure_time_from_office
             
@@ -134,7 +135,7 @@ class RequestOfficeStaffSerializer(serializers.ModelSerializer):
             return departure_time_from_office
         return None
 
-    def get_arrival_time_to_office(self, obj):
+    def get_arrival_time_to_office(self, obj)-> Optional[str]:
         if hasattr(obj, 'trip') and obj.trip.arrival_time_to_office is not None:
             arrival_time = obj.trip.arrival_time_to_office
             
@@ -180,7 +181,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 class AnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Answer
-        fields = ['content']
+        fields = '__all__'
 
 
 

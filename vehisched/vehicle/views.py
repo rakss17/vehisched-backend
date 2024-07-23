@@ -10,6 +10,7 @@ from django.db.models import Q
 from request.models import Request
 from django.utils import timezone
 from django.core.paginator import Paginator
+from trip.serializers import DummySerializer
 
 class VehicleListCreateView(generics.ListCreateAPIView):
 
@@ -186,6 +187,7 @@ class AnotherVehicle(generics.ListAPIView):
         return Response(serialized_data)
 
 class CheckVehicleOnProcess(generics.ListAPIView):
+    serializer_class = DummySerializer
         
     def get(self, request, *args, **kwargs):
         preferred_start_travel_date = self.request.GET.get('preferred_start_travel_date')
@@ -261,6 +263,7 @@ class CheckVehicleOnProcess(generics.ListAPIView):
         
 class HeartbeatView(generics.UpdateAPIView):
     queryset = OnProcess.objects.all()
+    serializer_class = DummySerializer
     
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
